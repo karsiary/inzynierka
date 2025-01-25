@@ -47,4 +47,25 @@ const AvatarFallback = React.forwardRef<
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-export { Avatar, AvatarImage, AvatarFallback }
+interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
+  initials: string
+  className?: string
+}
+
+const AvatarCustom = React.forwardRef<HTMLDivElement, AvatarProps>(
+  ({ className, initials, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "w-8 h-8 rounded-full bg-[#252422] flex items-center justify-center border-2 border-[#403d39]",
+        className
+      )}
+      {...props}
+    >
+      <span className="text-xs text-[#ccc5b9]">{initials}</span>
+    </div>
+  )
+)
+AvatarCustom.displayName = "Avatar"
+
+export { Avatar, AvatarImage, AvatarFallback, AvatarCustom }
