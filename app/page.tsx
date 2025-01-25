@@ -1,101 +1,163 @@
-import Image from "next/image";
+"use client"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Shield, AudioWaveformIcon as Waveform, Users, Plus, ChevronRight } from "lucide-react"
+import { useEffect } from "react"
+import { motion } from "framer-motion"
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+      <div className="min-h-screen bg-[#252422] relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(235,94,40,0.15),rgba(37,36,34,0))]"></div>
+        <div className="relative z-10">
+          {/* Nawigacja */}
+          <nav className="border-b border-[#403d39] bg-[#252422]/80 backdrop-blur-sm sticky top-0 z-50">
+            <div className="container mx-auto px-4 py-4 flex items-center">
+              <Link href="/" className="text-[#fffcf2] text-3xl font-bold flex items-center font-montserrat py-2">
+                <span className="text-[#eb5e28]">Audio</span>
+                <span>Plan</span>
+              </Link>
+              <div className="hidden md:flex items-center justify-center flex-grow space-x-8 text-[#ccc5b9] ml-8">
+                <Link href="/features" className="hover:text-[#eb5e28] font-roboto">
+                  Funkcje
+                </Link>
+                <Link href="/pricing" className="hover:text-[#eb5e28] font-roboto">
+                  Cennik
+                </Link>
+                <Link href="/about" className="hover:text-[#eb5e28] font-roboto">
+                  O nas
+                </Link>
+              </div>
+              <div className="flex items-center space-x-4 ml-auto">
+                <Link href="/login">
+                  <Button
+                    variant="ghost"
+                    className="text-[#ccc5b9] hover:text-[#eb5e28] hover:bg-[#403d39] rounded-full px-6 py-2 transition-all duration-300 font-roboto"
+                  >
+                    Zaloguj się
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button className="bg-gradient-to-r from-[#eb5e28] to-[#eb5e28]/80 text-white hover:from-[#eb5e28]/90 hover:to-[#eb5e28]/70 rounded-full px-6 py-2 shadow-lg shadow-[#eb5e28]/20 transition-all duration-300 font-roboto">
+                    Zarejestruj się
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </nav>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          {/* Sekcja Hero */}
+          <section className="container mx-auto px-4 py-24 text-center flex flex-col items-center">
+            <div className="inline-flex items-center bg-[#403d39]/50 rounded-full px-4 py-1.5 mb-8">
+              <span className="text-[#ccc5b9] text-sm font-open-sans">
+                Zaufany przez Profesjonalistów Audio na Całym Świecie
+              </span>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold text-[#fffcf2] mb-6 font-montserrat">
+              Zrewolucjonizuj Swój
+              <span className="block text-[#eb5e28]">Proces Produkcji Muzycznej</span>
+            </h1>
+            <motion.p
+              className="text-xl text-[#ccc5b9] max-w-2xl mx-auto mb-12 font-open-sans"
+              initial={{ opacity: 0, filter: "blur(10px)" }}
+              animate={{ opacity: 1, filter: "blur(0px)" }}
+              transition={{ duration: 1, delay: 0.5 }}
+            >
+              {[
+                "Usprawnij",
+                "swoje",
+                "projekty",
+                "audio",
+                "dzięki",
+                "kompleksowym",
+                "narzędziom",
+                "do",
+                "zarządzania",
+                "projektami,",
+                "stworzonym",
+                "specjalnie",
+                "dla",
+                "producentów",
+                "muzycznych,",
+                "inżynierów",
+                "i",
+                "artystów.",
+              ].map((word, index) => (
+                <motion.span
+                  key={index}
+                  initial={{ opacity: 0, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, filter: "blur(0px)" }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  {word}{" "}
+                </motion.span>
+              ))}
+            </motion.p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-lg">
+              <Link href="/register">
+                <Button className="bg-gradient-to-r from-[#eb5e28] to-[#eb5e28]/80 text-white hover:from-[#eb5e28]/90 hover:to-[#eb5e28]/70 rounded-full px-8 py-6 text-lg shadow-lg shadow-[#eb5e28]/20 transition-all duration-300 flex items-center gap-2 font-roboto">
+                  <Plus className="w-5 h-5" />
+                  Rozpocznij Teraz
+                </Button>
+              </Link>
+              <Link href="/features">
+                <Button
+                  variant="outline"
+                  className="border-2 border-[#403d39] text-[#252422] hover:text-[#ccc5b9] hover:bg-[#403d39] rounded-full px-8 py-6 text-lg transition-all duration-300 flex items-center gap-2 font-roboto"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                  Zobacz Funkcje
+                </Button>
+              </Link>
+            </div>
+          </section>
+
+          {/* Sekcja Funkcji */}
+          <section className="container mx-auto px-4 py-24">
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: Shield,
+                  title: "Bezpieczeństwo Projektów",
+                  description:
+                    "Zabezpiecz swoje projekty audio i pliki dzięki ochronie klasy korporacyjnej i systemom kopii zapasowych.",
+                },
+                {
+                  icon: Waveform,
+                  title: "Płynna Integracja",
+                  description:
+                    "Integruj się z ulubionymi programami DAW i narzędziami audio, aby usprawnić proces produkcji.",
+                },
+                {
+                  icon: Users,
+                  title: "Współpraca Zespołowa",
+                  description:
+                    "Współpracuj z członkami zespołu, artystami i klientami w czasie rzeczywistym dzięki zaawansowanym narzędziom do udostępniania.",
+                },
+              ].map((card, index) => (
+                <motion.div
+                  key={index}
+                  className="bg-[#403d39] rounded-lg p-6 text-center cursor-pointer"
+                  whileHover={{ scale: 1.05, boxShadow: "0 10px 20px rgba(235,94,40,0.2)" }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <motion.div
+                    className="w-12 h-12 bg-[#eb5e28]/10 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(235,94,40,0.3)]"
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <card.icon className="w-6 h-6 text-[#eb5e28]" />
+                  </motion.div>
+                  <h3 className="text-[#fffcf2] text-xl font-semibold mb-3 font-montserrat">{card.title}</h3>
+                  <p className="text-[#ccc5b9] font-open-sans">{card.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          </section>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+      </div>
+    </motion.div>
+  )
 }
+

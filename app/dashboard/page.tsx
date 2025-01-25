@@ -1,0 +1,302 @@
+"use client"
+
+import { useEffect, useState, useCallback } from "react"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Music2 } from "lucide-react"
+import Link from "next/link"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { usePathname, useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
+import { fetchUserProjects, fetchUserStats, fetchProjectActivity } from "@/lib/dataFetchers"
+import { AddProjectDialog } from "@/components/AddProjectDialog"
+import { NotificationsPopover } from "@/components/NotificationsPopover"
+import { format } from "date-fns"
+import { pl } from "date-fns/locale"
+
+export default function DashboardPage() {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [projects, setProjects] = useState<any[]>([])
+  const [stats, setStats] = useState<any>(null)
+  const [activityData, setActivityData] = useState<any[]>([])
+  const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
+
+  const fetchData = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      router.push("/login")
+      return
+    }
+    setUser(user)
+
+    const userProjects = await fetchUserProjects(user.id)
+    setProjects(userProjects)
+
+    const userStats = await fetchUserStats(user.id)
+    setStats(userStats)
+
+    const activity = await fetchProjectActivity(user.id)
+    setActivityData(activity)
+  }, [router])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  if (!user || !stats) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>
+  }
+
+  return (
+    <div className="min-h-screen bg-[#252422]">
+      {/* Gradient Background */}
+      <div className="absolute top-0 left-0 w-full h-full z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(235,94,40,0.15),rgba(37,36,34,0))]" />
+
+      <div className="relative z-10 flex">
+        {/* Sidebar */}
+        <aside className="w-64 min-h-screen bg-[#403d39]/50 backdrop-blur-sm border-r border-[#403d39] p-6">
+          <div className="flex items-center mb-8">
+            <span className="text-[#eb5e28] text-2xl font-bold font-montserrat">Audio</span>
+            <span className="text-[#fffcf2] text-2xl font-bold font-montserrat">Plan</span>
+          </div>
+
+          <nav className="space-y-2">
+            <Link
+              href="/dashboard"
+              className={`flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg ${
+                pathname === "/dashboard" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "hover:bg-[#403d39]"
+              }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              <span className="font-roboto">Dashboard</span>
+            </Link>
+            <Link
+              href="/projects"
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                pathname === "/projects" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "text-[#ccc5b9] hover:bg-[#403d39]"
+              }`}
+            >
+              <FolderKanban className="w-5 h-5" />
+              <span className="font-roboto">Projekty</span>
+            </Link>
+            <Link
+              href="/team"
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                pathname === "/team" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "text-[#ccc5b9] hover:bg-[#403d39]"
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              <span className="font-roboto">Zespół</span>
+            </Link>
+            <Link
+              href="/calendar"
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                pathname === "/calendar" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "text-[#ccc5b9] hover:bg-[#403d39]"
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+              <span className="font-roboto">Kalendarz</span>
+            </Link>
+          </nav>
+
+          <div className="absolute bottom-8 left-6 space-y-2">
+            <Link
+              href="/settings"
+              className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39]"
+            >
+              <Settings className="w-5 h-5" />
+              <span className="font-roboto">Ustawienia</span>
+            </Link>
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut()
+                router.push("/")
+              }}
+              className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39] w-full text-left"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-roboto">Wyloguj</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 p-8">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">
+                Witaj, {user.user_metadata.first_name}! 👋
+              </h1>
+              <p className="text-[#ccc5b9] font-open-sans">Sprawdź postęp swoich projektów muzycznych</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <NotificationsPopover />
+              <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center">
+                <span className="text-[#fffcf2] font-semibold font-montserrat">
+                  {user.user_metadata.first_name[0]}
+                  {user.user_metadata.last_name[0]}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card className="bg-[#403d39] border-none p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
+                  <Music2 className="w-6 h-6 text-[#eb5e28]" />
+                </div>
+                <div>
+                  <p className="text-[#ccc5b9] text-sm font-open-sans">Aktywne Projekty</p>
+                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats.activeProjects}</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="bg-[#403d39] border-none p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-[#eb5e28]" />
+                </div>
+                <div>
+                  <p className="text-[#ccc5b9] text-sm font-open-sans">Członkowie Zespołu</p>
+                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats.teamMembers}</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="bg-[#403d39] border-none p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
+                  <FolderKanban className="w-6 h-6 text-[#eb5e28]" />
+                </div>
+                <div>
+                  <p className="text-[#ccc5b9] text-sm font-open-sans">Ukończone Projekty</p>
+                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats.completedProjects}</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="bg-[#403d39] border-none p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-[#eb5e28]" />
+                </div>
+                <div>
+                  <p className="text-[#ccc5b9] text-sm font-open-sans">Nadchodzące Terminy</p>
+                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats.upcomingDeadlines}</h3>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Chart and Projects Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Chart */}
+            <Card className="lg:col-span-2 bg-[#403d39] border-none p-6 pb-2">
+              <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 font-montserrat">Aktywność Projektowa</h3>
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={activityData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ccc5b9" opacity={0.1} />
+                    <XAxis dataKey="name" stroke="#ccc5b9" tickFormatter={(value) => value} />
+                    <YAxis stroke="#ccc5b9" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#403d39",
+                        border: "none",
+                        borderRadius: "8px",
+                      }}
+                      labelStyle={{ color: "#fffcf2" }}
+                      formatter={(value, name) => [`${value} ${name === "projekty" ? "projektów" : name}`, ""]}
+                      labelFormatter={(label) =>
+                        `${label}, ${format(activityData.find((d) => d.name === label)?.date || new Date(), "d MMM", { locale: pl })}`
+                      }
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="projekty"
+                      stroke="#eb5e28"
+                      strokeWidth={2}
+                      dot={{ fill: "#eb5e28" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card className="bg-[#403d39] border-none p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">Ostatnia Aktywność</h3>
+                <Button variant="ghost" size="sm" className="text-[#eb5e28] hover:text-[#eb5e28]/80">
+                  Zobacz wszystko
+                </Button>
+              </div>
+              <div className="space-y-4">
+                {stats.recentActivity.map((activity: any, index: number) => (
+                  <div key={index} className="flex items-center gap-4">
+                    <div className="w-2 h-2 rounded-full bg-[#eb5e28]" />
+                    <div>
+                      <p className="text-[#fffcf2] font-open-sans">{activity.description}</p>
+                      <p className="text-sm text-[#ccc5b9]">{activity.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Projects List */}
+          <Card className="bg-[#403d39] border-none p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">Twoje Projekty</h3>
+              <Button
+                className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+                onClick={() => setIsAddProjectOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Nowy Projekt
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {projects.map((project, index) => (
+                <Link
+                  href={`/project/${project.id}`}
+                  key={project.id}
+                  className="bg-[#252422] rounded-lg p-4 flex items-center justify-between hover:bg-[#252422]/80 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
+                      <Music2 className="w-5 h-5 text-[#eb5e28]" />
+                    </div>
+                    <div>
+                      <h4 className="text-[#fffcf2] font-semibold font-montserrat">{project.name}</h4>
+                      <p className="text-sm text-[#ccc5b9] font-open-sans">
+                        {project.role} • Termin: {new Date(project.due_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm text-[#ccc5b9] font-open-sans">{project.status}</p>
+                      <p className="text-sm text-[#eb5e28] font-open-sans">{project.progress}%</p>
+                    </div>
+                    <div className="w-24 h-2 bg-[#403d39] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#eb5e28] rounded-full" style={{ width: `${project.progress}%` }} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Card>
+          <AddProjectDialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen} onProjectAdded={fetchData} />
+        </main>
+      </div>
+    </div>
+  )
+}
+
