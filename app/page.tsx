@@ -104,7 +104,7 @@ export default function LandingPage() {
               <Link href="/features">
                 <Button
                   variant="outline"
-                  className="border-2 border-[#403d39] text-[#252422] hover:text-[#ccc5b9] hover:bg-[#403d39] rounded-full px-8 py-6 text-lg transition-all duration-300 flex items-center gap-2 font-roboto"
+                  className="border-2 border-[#fffcf2] bg-[#fffcf2] text-[#252422] hover:bg-[#403d39] hover:border-[#403d39] hover:text-[#fffcf2] rounded-full px-8 py-6 text-lg transition-all duration-300 flex items-center gap-2 font-roboto"
                 >
                   <ChevronRight className="w-5 h-5" />
                   Zobacz Funkcje
