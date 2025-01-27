@@ -51,6 +51,8 @@ model User {
   teams         TeamMember[]
   projectMembers ProjectMember[]
   songAuthors   SongAuthor[]
+  createdTasks  Task[]    @relation("TaskCreator")
+  assignedTasks TaskAssignee[]
 }
 
 model VerificationToken {
@@ -141,15 +143,34 @@ model SongAuthor {
 }
 
 model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   @default("todo")
+  priority    String   @default("Średni")
+  due_date    DateTime?
+  phase_id    String
+  project_id  Int
+  song_id     Int?
+  created_by  String
+  project     Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  song        Song?    @relation(fields: [song_id], references: [id])
+  creator     User     @relation("TaskCreator", fields: [created_by], references: [id])
+  assignees   TaskAssignee[]
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model TaskAssignee {
   id        Int      @id @default(autoincrement())
-  title     String
-  status    String   @default("todo")
-  projectId Int
-  songId    Int?
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  song      Song?    @relation(fields: [songId], references: [id])
+  taskId    Int
+  userId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  @@unique([taskId, userId])
 }
 
 model Activity {

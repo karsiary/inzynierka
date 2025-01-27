@@ -13,8 +13,7 @@ import { ProjectStats } from "./project-stats"
 import { ProjectHeader } from "./project-header"
 import { AddTaskDialog } from "./add-task-dialog"
 import { SongSelector } from "./song-selector"
-import { supabase } from "@/lib/supabase"
-import type { Project, Song } from "@/types/supabase"
+import type { Project, Song } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
 import {
@@ -42,11 +41,11 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true)
   const [currentPhase, setCurrentPhase] = useState("1")
   const [selectedSong, setSelectedSong] = useState<string>("all")
-  const [viewPhase, setViewPhase] = useState("1") // Added viewPhase state
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false) // Added isConfirmModalOpen state
-  const [isProjectEndModalOpen, setIsProjectEndModalOpen] = useState(false) // Added isProjectEndModalOpen state
-  const [songPhases, setSongPhases] = useState<Record<string, string>>({}) // Added songPhases state
-  const [completedSongs, setCompletedSongs] = useState<Record<string, boolean>>({}) // Added completedSongs state
+  const [viewPhase, setViewPhase] = useState("1")
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+  const [isProjectEndModalOpen, setIsProjectEndModalOpen] = useState(false)
+  const [songPhases, setSongPhases] = useState<Record<string, string>>({})
+  const [completedSongs, setCompletedSongs] = useState<Record<string, boolean>>({})
   const params = useParams()
   const projectId = params.id as string
 
@@ -57,17 +56,19 @@ export default function ProjectPage() {
   async function fetchProject() {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from("projects").select("*").eq("id", projectId).single()
-
-      if (error) {
-        throw error
+      console.log("Pobieranie projektu o ID:", projectId)
+      const response = await fetch(`/api/projects/${projectId}/`)
+      console.log("Status odpowiedzi:", response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("Błąd odpowiedzi:", errorData)
+        throw new Error(errorData.error || 'Błąd podczas pobierania projektu')
       }
-
-      if (data) {
-        setProject(data)
-        // Ustawiamy pierwszą piosenkę jako domyślnie wybraną
-        //setSelectedSong(sampleSongs[0].id)
-      }
+      
+      const data = await response.json()
+      console.log("Pobrane dane projektu:", data)
+      setProject(data)
     } catch (error) {
       console.error("Error fetching project:", error)
     } finally {
@@ -177,7 +178,7 @@ export default function ProjectPage() {
                     className="w-full sm:w-64 bg-[#252422] border-none text-[#ccc5b9] placeholder:text-[#ccc5b9]/50"
                   />
                   <SongSelector
-                    songs={sampleSongs}
+                    songs={project.songs}
                     selectedSong={selectedSong}
                     onSongChange={handleSongChange}
                     showAllOption={true}
@@ -247,29 +248,23 @@ export default function ProjectPage() {
                 <DialogHeader>
                   <DialogTitle className="text-xl font-semibold">Potwierdzenie zakończenia utworu</DialogTitle>
                   <DialogDescription className="text-[#ccc5b9]">
-                    Czy na pewno chcesz zakończyć utwór? Ta akcja jest nieodwracalna i zamknie wszystkie aktywne zadania
-                    związane z tym utworem.
+                    Czy na pewno chcesz zakończyć utwór? Ta akcja jest nieodwracalna i zamknie wszystkie aktywne zadania.
                   </DialogDescription>
                 </DialogHeader>
-                <DialogFooter className="sm:justify-start">
+                <DialogFooter>
                   <Button
-                    type="button"
-                    variant="secondary"
+                    variant="ghost"
                     onClick={() => setIsProjectEndModalOpen(false)}
-                    className="bg-[#403d39] text-[#fffcf2] hover:bg-[#403d39]/80"
+                    className="text-[#ccc5b9] hover:text-[#fffcf2] hover:bg-[#403d39]"
                   >
                     Anuluj
                   </Button>
                   <Button
-                    type="button"
                     onClick={() => {
-                      if (selectedSong !== "all") {
-                        setCompletedSongs((prev) => ({ ...prev, [selectedSong]: true }))
-                        setSongPhases((prev) => ({ ...prev, [selectedSong]: "Zakończona" }))
-                      }
+                      setCompletedSongs((prev) => ({ ...prev, [selectedSong]: true }))
                       setIsProjectEndModalOpen(false)
                     }}
-                    className="bg-red-500 text-white hover:bg-red-600"
+                    className="bg-[#eb5e28] hover:bg-[#eb5e28]/90 text-white"
                   >
                     Zakończ utwór
                   </Button>
@@ -281,48 +276,30 @@ export default function ProjectPage() {
                 <DialogHeader>
                   <DialogTitle className="text-xl font-semibold">Potwierdzenie zmiany fazy</DialogTitle>
                   <DialogDescription className="text-[#ccc5b9]">
-                    Czy na pewno chcesz zmienić domyślną fazę projektu? Ta akcja może mieć wpływ na bieżące zadania i
-                    harmonogram.
+                    Czy na pewno chcesz przejść do następnej fazy? Upewnij się, że wszystkie zadania w obecnej fazie są
+                    zakończone.
                   </DialogDescription>
                 </DialogHeader>
-                <DialogFooter className="sm:justify-start">
+                <DialogFooter>
                   <Button
-                    type="button"
-                    variant="secondary"
+                    variant="ghost"
                     onClick={() => setIsConfirmModalOpen(false)}
-                    className="bg-[#403d39] text-[#fffcf2] hover:bg-[#403d39]/80"
+                    className="text-[#ccc5b9] hover:text-[#fffcf2] hover:bg-[#403d39]"
                   >
                     Anuluj
                   </Button>
                   <Button
-                    type="button"
                     onClick={handlePhaseChange}
-                    className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+                    className="bg-[#eb5e28] hover:bg-[#eb5e28]/90 text-white"
                   >
-                    Potwierdź zmianę
+                    Przejdź do następnej fazy
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </Card>
         </main>
-
-        {/* Add Task Dialog */}
-        <AddTaskDialog
-          open={isAddTaskOpen}
-          onOpenChange={setIsAddTaskOpen}
-          projectId={project.id}
-          phaseId={currentPhase}
-          onTaskAdded={handleTaskAdded}
-          selectedSong={selectedSong}
-          songs={sampleSongs}
-        />
       </div>
-      <style jsx>{`
-        .default-phase {
-          background-color: rgba(235, 94, 40, 0.1);
-        }
-      `}</style>
     </div>
   )
 }

@@ -3,8 +3,7 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { TaskForm } from "@/components/TaskForm"
-import { supabase } from "@/lib/supabase"
-import type { Song } from "@/types/supabase"
+import type { Song } from "@prisma/client"
 
 interface AddTaskDialogProps {
   open: boolean
@@ -47,13 +46,29 @@ export function AddTaskDialog({
       }
 
       if (taskToEdit) {
-        const { error: updateError } = await supabase.from("tasks").update(newTask).eq("id", taskToEdit.id)
+        const response = await fetch(`/api/tasks/${taskToEdit.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newTask),
+        })
 
-        if (updateError) throw updateError
+        if (!response.ok) {
+          throw new Error('Błąd podczas aktualizacji zadania')
+        }
       } else {
-        const { error: insertError } = await supabase.from("tasks").insert([newTask])
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newTask),
+        })
 
-        if (insertError) throw insertError
+        if (!response.ok) {
+          throw new Error('Błąd podczas tworzenia zadania')
+        }
       }
 
       onTaskAdded()
@@ -68,9 +83,13 @@ export function AddTaskDialog({
     if (!taskToEdit?.id) return
 
     try {
-      const { error } = await supabase.from("tasks").delete().eq("id", taskToEdit.id)
+      const response = await fetch(`/api/tasks/${taskToEdit.id}`, {
+        method: 'DELETE',
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error('Błąd podczas usuwania zadania')
+      }
 
       onTaskAdded()
       onOpenChange(false)
