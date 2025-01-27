@@ -1,81 +1,83 @@
+"use client"
+
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { BarChart3, Users, FolderKanban, Calendar, Settings, LogOut } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { signOut } from "next-auth/react"
 
 export function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push("/")
+    await signOut({ redirect: true, callbackUrl: "/login" })
   }
 
   return (
-    <aside className="w-64 min-h-screen bg-[#403d39]/50 backdrop-blur-sm border-r border-[#403d39] p-6">
-      <div className="flex items-center mb-8">
-        <span className="text-[#eb5e28] text-2xl font-bold font-montserrat">Audio</span>
-        <span className="text-[#fffcf2] text-2xl font-bold font-montserrat">Plan</span>
+    <div className="pb-12 w-full">
+      <div className="space-y-4 py-4">
+        <div className="px-3 py-2">
+          <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight text-[#fffcf2]">
+            Nawigacja
+          </h2>
+          <div className="space-y-1">
+            <Link href="/dashboard">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-[#fffcf2] hover:text-[#fffcf2] hover:bg-[#252422]",
+                  pathname === "/dashboard" && "bg-[#252422]"
+                )}
+              >
+                Dashboard
+              </Button>
+            </Link>
+            <Link href="/projects">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-[#fffcf2] hover:text-[#fffcf2] hover:bg-[#252422]",
+                  pathname === "/projects" && "bg-[#252422]"
+                )}
+              >
+                Projekty
+              </Button>
+            </Link>
+            <Link href="/calendar">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-[#fffcf2] hover:text-[#fffcf2] hover:bg-[#252422]",
+                  pathname === "/calendar" && "bg-[#252422]"
+                )}
+              >
+                Kalendarz
+              </Button>
+            </Link>
+            <Link href="/settings">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-[#fffcf2] hover:text-[#fffcf2] hover:bg-[#252422]",
+                  pathname === "/settings" && "bg-[#252422]"
+                )}
+              >
+                Ustawienia
+              </Button>
+            </Link>
+          </div>
+        </div>
+        <div className="px-3 py-2">
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            className="w-full justify-start text-[#fffcf2] hover:text-[#fffcf2] hover:bg-[#252422]"
+          >
+            Wyloguj się
+          </Button>
+        </div>
       </div>
-
-      <nav className="space-y-2">
-        <Link
-          href="/dashboard"
-          className={`flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg ${
-            pathname === "/dashboard" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "hover:bg-[#403d39]"
-          }`}
-        >
-          <BarChart3 className="w-5 h-5" />
-          <span className="font-roboto">Dashboard</span>
-        </Link>
-        <Link
-          href="/projects"
-          className={`flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg ${
-            pathname === "/projects" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "hover:bg-[#403d39]"
-          }`}
-        >
-          <FolderKanban className="w-5 h-5" />
-          <span className="font-roboto">Projekty</span>
-        </Link>
-        <Link
-          href="/team"
-          className={`flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg ${
-            pathname === "/team" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "hover:bg-[#403d39]"
-          }`}
-        >
-          <Users className="w-5 h-5" />
-          <span className="font-roboto">Zespół</span>
-        </Link>
-        <Link
-          href="/calendar"
-          className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-            pathname === "/calendar" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "text-[#ccc5b9] hover:bg-[#403d39]"
-          }`}
-        >
-          <Calendar className="w-5 h-5" />
-          <span className="font-roboto">Kalendarz</span>
-        </Link>
-      </nav>
-
-      <div className="absolute bottom-8 left-6 space-y-2">
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39]"
-        >
-          <Settings className="w-5 h-5" />
-          <span className="font-roboto">Ustawienia</span>
-        </Link>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39] w-full text-left"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="font-roboto">Wyloguj</span>
-        </button>
-      </div>
-    </aside>
+    </div>
   )
 }
 

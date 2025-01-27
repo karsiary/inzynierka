@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase"
 import { Loader2 } from "lucide-react"
+import { signIn } from "next-auth/react"
 
 export function RegisterForm() {
   const [firstName, setFirstName] = useState("")
@@ -23,29 +23,53 @@ export function RegisterForm() {
     setError(null)
     setIsLoading(true)
 
-    if (password !== confirmPassword) {
-      setError("Hasła nie są identyczne")
-      setIsLoading(false)
-      return
-    }
-
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          },
+      if (password !== confirmPassword) {
+        throw new Error("Hasła nie są identyczne")
+      }
+
+      if (password.length < 6) {
+        throw new Error("Hasło musi mieć co najmniej 6 znaków")
+      }
+
+      console.log("Próba utworzenia użytkownika...")
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          email,
+          password,
+          name: `${firstName} ${lastName}`,
+        }),
       })
 
-      if (error) throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Wystąpił błąd podczas rejestracji")
+      }
+
+      console.log("Użytkownik utworzony:", data)
+
+      console.log("Próba logowania...")
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+      console.log("Wynik logowania:", result)
+
+      if (result?.error) {
+        throw new Error(result.error)
+      }
 
       router.push("/dashboard")
+      router.refresh()
     } catch (error) {
-      setError("Wystąpił błąd podczas rejestracji")
+      console.error("Szczegóły błędu rejestracji:", error)
+      setError(error instanceof Error ? error.message : "Wystąpił błąd podczas rejestracji")
     } finally {
       setIsLoading(false)
     }
@@ -108,6 +132,7 @@ export function RegisterForm() {
           onChange={(e) => setPassword(e.target.value)}
           className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
           required
+          minLength={6}
         />
       </div>
 
@@ -122,6 +147,7 @@ export function RegisterForm() {
           onChange={(e) => setConfirmPassword(e.target.value)}
           className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
           required
+          minLength={6}
         />
       </div>
 

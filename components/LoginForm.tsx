@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase"
 import { Loader2 } from "lucide-react"
+import { signIn } from "next-auth/react"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
@@ -23,20 +23,18 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const result = await signIn("credentials", {
         email,
         password,
+        redirect: false,
       })
 
-      if (error) throw error
-
-      if (data.user) {
-        console.log("Zalogowano pomyślnie:", data.user)
-      } else {
-        throw new Error("Brak danych użytkownika po zalogowaniu")
+      if (result?.error) {
+        throw new Error(result.error)
       }
 
       router.push("/dashboard")
+      router.refresh()
     } catch (error) {
       console.error("Błąd logowania:", error)
       setError(`Błąd logowania: ${error.message}`)

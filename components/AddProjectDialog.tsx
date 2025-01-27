@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectForm } from "./ProjectForm"
-import { supabase } from "@/lib/supabase"
 
 interface AddProjectDialogProps {
   open: boolean
@@ -18,44 +17,22 @@ export function AddProjectDialog({ open, onOpenChange, onProjectAdded }: AddProj
     setError(null)
 
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser()
-      if (userError) {
-        console.error("Error getting user:", userError)
-        throw userError
-      }
-
-      if (!userData.user) {
-        throw new Error("No user data available")
-      }
-
-      const newProject = {
-        ...projectData,
-        user_id: userData.user.id,
-      }
-
-      const { data, error: insertError } = await supabase.from("projects").insert([newProject]).select()
-
-      if (insertError) {
-        console.error("Error inserting project:", insertError)
-        throw insertError
-      }
-
-      if (!data || data.length === 0) {
-        throw new Error("No data returned after inserting project")
-      }
-
-      const { error: activityError } = await supabase.from("activity").insert([
-        {
-          user_id: userData.user.id,
-          project_id: data[0].id,
-          action: "create_project",
-          description: `Utworzono projekt: ${projectData.name}`,
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      ])
+        body: JSON.stringify(projectData),
+      })
 
-      if (activityError) {
-        console.error("Error inserting activity:", activityError)
-        // We don't throw here as the project was successfully created
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Wystąpił błąd podczas dodawania projektu")
+      }
+
+      const data = await response.json()
+      if (!data) {
+        throw new Error("Brak danych zwróconych po utworzeniu projektu")
       }
 
       onProjectAdded()
@@ -65,7 +42,7 @@ export function AddProjectDialog({ open, onOpenChange, onProjectAdded }: AddProj
       setError(
         error instanceof Error
           ? `Wystąpił błąd podczas dodawania projektu: ${error.message}`
-          : "Wystąpił nieznany błąd podczas dodawania projektu.",
+          : "Wystąpił nieznany błąd podczas dodawania projektu."
       )
     }
   }

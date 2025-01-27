@@ -20,38 +20,52 @@ import Link from "next/link"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { usePathname } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import type { Project } from "@/types/supabase"
+import { usePathname, useRouter } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
+import type { Project } from "@/types"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
+  const router = useRouter()
+  const { data: session, status } = useSession()
 
   useEffect(() => {
-    fetchProjects()
-  }, [])
+    if (status === "authenticated") {
+      fetchProjects()
+    } else if (status === "unauthenticated") {
+      router.push("/login")
+    }
+  }, [status])
 
   async function fetchProjects() {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from("projects").select("*")
-
-      if (error) {
-        throw error
+      const response = await fetch(`/api/projects?userId=${session?.user?.id}`)
+      
+      if (!response.ok) {
+        throw new Error("Błąd podczas pobierania projektów")
       }
 
-      if (data) {
-        setProjects(data)
-      }
+      const data = await response.json()
+      setProjects(data)
     } catch (error) {
       console.error("Error fetching projects:", error)
     } finally {
       setLoading(false)
     }
   }
+
+  if (status === "loading") {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>
+  }
+
+  const userInitials = session?.user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("") || "U"
 
   return (
     <div className="min-h-screen bg-[#252422]">
@@ -113,13 +127,13 @@ export default function ProjectsPage() {
               <Settings className="w-5 h-5" />
               <span className="font-roboto">Ustawienia</span>
             </Link>
-            <Link
-              href="/logout"
-              className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39]"
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39] w-full text-left"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-roboto">Wyloguj</span>
-            </Link>
+            </button>
           </div>
         </aside>
 
@@ -134,7 +148,7 @@ export default function ProjectsPage() {
             <div className="flex items-center gap-4">
               <NotificationsPopover />
               <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center">
-                <span className="text-[#fffcf2] font-semibold font-montserrat">JK</span>
+                <span className="text-[#fffcf2] font-semibold font-montserrat">{userInitials}</span>
               </div>
             </div>
           </div>
@@ -173,6 +187,9 @@ export default function ProjectsPage() {
                   <SelectContent className="bg-[#252422] border-[#403d39]">
                     <SelectItem value="all" className="font-open-sans text-white">
                       Wszystkie
+                    </SelectItem>
+                    <SelectItem value="planning" className="font-open-sans text-white">
+                      Planowanie
                     </SelectItem>
                     <SelectItem value="pre" className="font-open-sans text-white">
                       Preprodukcja
@@ -223,9 +240,9 @@ export default function ProjectsPage() {
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-2 h-2 rounded-full ${
-                              project.status === "Zakończony"
+                              project.status === "completed"
                                 ? "bg-green-500"
-                                : project.status === "W trakcie"
+                                : project.status === "active"
                                   ? "bg-[#eb5e28]"
                                   : "bg-yellow-500"
                             }`}
@@ -243,37 +260,24 @@ export default function ProjectsPage() {
                         </div>
                       </div>
 
-                      {/* Team & Phase */}
+                      {/* Phase & Due Date */}
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="flex -space-x-2">
-                            {project.team.slice(0, 3).map((member, index) => (
-                              <div
-                                key={index}
-                                className="w-8 h-8 rounded-full bg-[#252422] flex items-center justify-center border-2 border-[#403d39]"
-                              >
-                                <span className="text-xs text-[#ccc5b9]">{member.slice(0, 2)}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <span className="text-sm text-[#ccc5b9]">{project.team.length} członków</span>
+                          <span className="text-sm text-[#ccc5b9]">Faza: {project.phase}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-[#ccc5b9]" />
-                          <span className="text-sm text-[#ccc5b9]">{project.phase}</span>
+                          <span className="text-sm text-[#ccc5b9]">
+                            Termin: {project.due_date ? new Date(project.due_date).toLocaleDateString() : "Brak"}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Budget & Due Date */}
+                      {/* Budget */}
                       <div className="text-right">
-                        <div className="text-lg font-semibold text-[#fffcf2] font-montserrat">
-                          {project.budget_actual.toLocaleString()} zł
-                          <span className="text-sm text-[#ccc5b9] ml-1">
-                            / {project.budget_planned.toLocaleString()} zł
-                          </span>
-                        </div>
-                        <p className="text-sm text-[#ccc5b9]">
-                          Termin: {new Date(project.due_date).toLocaleDateString()}
+                        <p className="text-sm text-[#ccc5b9]">Budżet</p>
+                        <p className="text-[#fffcf2] font-semibold">
+                          {project.budget_actual} / {project.budget_planned} PLN
                         </p>
                       </div>
                     </div>

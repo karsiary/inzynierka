@@ -7,49 +7,55 @@ import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar,
 import Link from "next/link"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { usePathname, useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
 import { fetchUserProjects, fetchUserStats, fetchProjectActivity } from "@/lib/dataFetchers"
 import { AddProjectDialog } from "@/components/AddProjectDialog"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { format } from "date-fns"
 import { pl } from "date-fns/locale"
+import { useSession, signOut } from "next-auth/react"
 
 export default function DashboardPage() {
   const pathname = usePathname()
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
   const [projects, setProjects] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
   const [activityData, setActivityData] = useState<any[]>([])
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
 
   const fetchData = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
+    if (!session?.user?.id) {
       router.push("/login")
       return
     }
-    setUser(user)
 
-    const userProjects = await fetchUserProjects(user.id)
+    const userProjects = await fetchUserProjects(session.user.id)
     setProjects(userProjects)
 
-    const userStats = await fetchUserStats(user.id)
+    const userStats = await fetchUserStats(session.user.id)
     setStats(userStats)
 
-    const activity = await fetchProjectActivity(user.id)
+    const activity = await fetchProjectActivity(session.user.id)
     setActivityData(activity)
-  }, [router])
+  }, [router, session])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    if (status === "authenticated") {
+      fetchData()
+    } else if (status === "unauthenticated") {
+      router.push("/login")
+    }
+  }, [status, fetchData])
 
-  if (!user || !stats) {
+  if (status === "loading" || !stats) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
+
+  const userName = session?.user?.name?.split(" ")[0] || "Użytkowniku"
+  const userInitials = session?.user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("") || "U"
 
   return (
     <div className="min-h-screen bg-[#252422]">
@@ -112,10 +118,7 @@ export default function DashboardPage() {
               <span className="font-roboto">Ustawienia</span>
             </Link>
             <button
-              onClick={async () => {
-                await supabase.auth.signOut()
-                router.push("/")
-              }}
+              onClick={() => signOut({ callbackUrl: "/login" })}
               className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39] w-full text-left"
             >
               <LogOut className="w-5 h-5" />
@@ -130,7 +133,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">
-                Witaj, {user.user_metadata.first_name}! 👋
+                Witaj, {userName}! 👋
               </h1>
               <p className="text-[#ccc5b9] font-open-sans">Sprawdź postęp swoich projektów muzycznych</p>
             </div>
@@ -138,8 +141,7 @@ export default function DashboardPage() {
               <NotificationsPopover />
               <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center">
                 <span className="text-[#fffcf2] font-semibold font-montserrat">
-                  {user.user_metadata.first_name[0]}
-                  {user.user_metadata.last_name[0]}
+                  {userInitials}
                 </span>
               </div>
             </div>

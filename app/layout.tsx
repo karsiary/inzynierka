@@ -1,15 +1,24 @@
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
 import "./globals.css"
+import { getServerSession } from "next-auth"
+import { authOptions } from "./api/auth/[...nextauth]/route"
+import { SessionProvider } from "@/components/providers/SessionProvider"
 
-export const metadata = {
+const inter = Inter({ subsets: ["latin"] })
+
+export const metadata: Metadata = {
   title: "AudioPlan",
-  description: "Zarządzanie projektami muzycznymi",
+  description: "Aplikacja do zarządzania projektami audio",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await getServerSession(authOptions)
+
   return (
     <html lang="pl">
       <head>
@@ -18,7 +27,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body className={inter.className}>
+        <SessionProvider session={session}>{children}</SessionProvider>
+      </body>
     </html>
   )
 }
