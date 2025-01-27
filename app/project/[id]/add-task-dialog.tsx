@@ -29,21 +29,27 @@ export function AddTaskDialog({
   songs,
 }: AddTaskDialogProps) {
   const [error, setError] = useState<string | null>(null)
+  
+  console.log("AddTaskDialog - otrzymane piosenki:", songs)
+  console.log("AddTaskDialog - wybrany song:", selectedSong)
 
   const handleSubmit = async (taskData: any) => {
     setError(null)
 
     try {
+      const songId = taskData.song_id || selectedSong
       const newTask = {
         ...taskData,
-        project_id: projectId,
+        project_id: parseInt(projectId),
         phase_id: phaseId,
         status: taskToEdit ? taskToEdit.status : currentColumn,
-        song_id: taskData.song_id || selectedSong,
+        song_id: songId === 'all' ? null : parseInt(songId),
         // Only include budget fields if they have values
         ...(taskData.planned_budget ? { planned_budget: taskData.planned_budget } : {}),
         ...(taskData.actual_budget ? { actual_budget: taskData.actual_budget } : {}),
       }
+
+      console.log("Dane zadania do wysłania:", newTask)
 
       if (taskToEdit) {
         const response = await fetch(`/api/tasks/${taskToEdit.id}`, {
@@ -55,7 +61,8 @@ export function AddTaskDialog({
         })
 
         if (!response.ok) {
-          throw new Error('Błąd podczas aktualizacji zadania')
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Błąd podczas aktualizacji zadania')
         }
       } else {
         const response = await fetch('/api/tasks', {
@@ -67,7 +74,8 @@ export function AddTaskDialog({
         })
 
         if (!response.ok) {
-          throw new Error('Błąd podczas tworzenia zadania')
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Błąd podczas tworzenia zadania')
         }
       }
 
@@ -75,7 +83,7 @@ export function AddTaskDialog({
       onOpenChange(false)
     } catch (error) {
       console.error("Error saving task:", error)
-      setError("Wystąpił błąd podczas zapisywania zadania")
+      setError(error.message || "Wystąpił błąd podczas zapisywania zadania")
     }
   }
 
@@ -117,6 +125,8 @@ export function AddTaskDialog({
           onDelete={taskToEdit ? handleDelete : undefined}
           selectedSong={selectedSong}
           songs={songs}
+          projectId={projectId}
+          phaseId={phaseId}
         />
 
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}

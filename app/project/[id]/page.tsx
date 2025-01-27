@@ -68,6 +68,7 @@ export default function ProjectPage() {
       
       const data = await response.json()
       console.log("Pobrane dane projektu:", data)
+      console.log("Piosenki w projekcie:", data.songs)
       setProject(data)
     } catch (error) {
       console.error("Error fetching project:", error)
@@ -238,7 +239,9 @@ export default function ProjectPage() {
                       selectedSong={selectedSong}
                       currentPhase={selectedSong !== "all" ? songPhases[selectedSong] || "1" : currentPhase}
                       isSongCompleted={selectedSong !== "all" && completedSongs[selectedSong]}
+                      songs={project?.songs || []}
                     />
+                    {console.log("ProjectPage - przekazywany selectedSong:", selectedSong)}
                   </TabsContent>
                 ))}
               </Tabs>

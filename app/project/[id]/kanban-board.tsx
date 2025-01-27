@@ -34,9 +34,10 @@ interface KanbanBoardProps {
   phaseId: string
   selectedSong: string | null
   isSongCompleted: boolean
+  songs: any[]
 }
 
-export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted }: KanbanBoardProps) {
+export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted, songs }: KanbanBoardProps) {
   const [columns, setColumns] = useState<Record<string, Column>>({
     todo: {
       id: "todo",
@@ -262,7 +263,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted 
         currentColumn={currentColumn}
         taskToEdit={editingTask}
         selectedSong={selectedSong}
-        songs={[]}
+        songs={songs}
       />
       <style jsx>{`
         .scrollbar-hide {

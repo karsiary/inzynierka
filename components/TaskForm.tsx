@@ -15,17 +15,62 @@ import { format } from "date-fns"
 import { pl } from "date-fns/locale"
 import { CalendarIcon, Plus, Trash2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { Song } from "@/types/supabase"
+import type { Song } from "@prisma/client"
 
-interface TaskFormProps {
-  taskToEdit?: any
-  onSubmit: (taskData: any) => void
-  onDelete?: () => void
-  selectedSong: string | null
-  songs?: Song[]
+interface ChecklistItem {
+  id: number
+  text: string
+  completed: boolean
 }
 
-export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs = [] }: TaskFormProps) {
+interface Comment {
+  id: number
+  text: string
+  author: string
+  timestamp: string
+}
+
+interface TaskData {
+  id?: number
+  title: string
+  description: string | null
+  status: string
+  priority: string
+  start_date?: string
+  end_date?: string
+  due_date: Date | null
+  phase_id: string
+  project_id: number
+  song_id: number | null
+  created_by: string
+  activityType?: string
+  assigned_to?: string[]
+  responsible_user?: string
+  planned_budget?: number
+  actual_budget?: number
+  checklist?: ChecklistItem[]
+  comments?: Comment[]
+}
+
+interface TaskFormProps {
+  taskToEdit?: TaskData | null
+  onSubmit: (taskData: TaskData) => void
+  onDelete?: () => void
+  selectedSong: string | null
+  songs: Song[]
+  projectId: string
+  phaseId: string
+}
+
+export function TaskForm({ 
+  taskToEdit, 
+  onSubmit, 
+  onDelete, 
+  selectedSong, 
+  songs = [],
+  projectId,
+  phaseId
+}: TaskFormProps) {
   const [activeTab, setActiveTab] = useState("details")
   const [title, setTitle] = useState(taskToEdit?.title || "")
   const [description, setDescription] = useState(taskToEdit?.description || "")
@@ -41,13 +86,25 @@ export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs =
   const [responsibleUser, setResponsibleUser] = useState(taskToEdit?.responsible_user || "")
   const [plannedBudget, setPlannedBudget] = useState(taskToEdit?.planned_budget?.toString() || "")
   const [actualBudget, setActualBudget] = useState(taskToEdit?.actual_budget?.toString() || "")
-  const [checklist, setChecklist] = useState(taskToEdit?.checklist || [])
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(taskToEdit?.checklist || [])
   const [newChecklistItem, setNewChecklistItem] = useState("")
-  const [comments, setComments] = useState(taskToEdit?.comments || [])
+  const [comments, setComments] = useState<Comment[]>(taskToEdit?.comments || [])
   const [newComment, setNewComment] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [songId, setSongId] = useState(taskToEdit?.song_id || selectedSong || "")
+  const [songId, setSongId] = useState(selectedSong && selectedSong !== "all" ? selectedSong.toString() : "")
   const [activityType, setActivityType] = useState(taskToEdit?.activityType || "")
+
+  useEffect(() => {
+    console.log("TaskForm - useEffect dla selectedSong:", selectedSong);
+    if (selectedSong && selectedSong !== "all") {
+      console.log("TaskForm - ustawianie songId na:", selectedSong);
+      setSongId(selectedSong.toString());
+    }
+  }, [selectedSong]);
+
+  console.log("TaskForm - otrzymane piosenki:", songs)
+  console.log("TaskForm - wybrany song:", selectedSong)
+  console.log("TaskForm - aktualny songId:", songId)
 
   // Mock team members data - replace with actual data from your backend
   const teamMembers = [
@@ -64,7 +121,7 @@ export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs =
   }
 
   const handleToggleChecklistItem = (id: number) => {
-    setChecklist(checklist.map((item) => (item.id === id ? { ...item, completed: !item.completed } : item)))
+    setChecklist(checklist.map((item: ChecklistItem) => (item.id === id ? { ...item, completed: !item.completed } : item)))
   }
 
   const handleAddComment = () => {
@@ -91,7 +148,7 @@ export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs =
       return
     }
 
-    const taskData = {
+    const taskData: TaskData = {
       title,
       description,
       start_date: startDate?.toISOString(),
@@ -100,13 +157,19 @@ export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs =
       priority,
       assigned_to: assignedTo,
       responsible_user: responsibleUser,
-      song_id: songId,
+      song_id: songId && songId !== "all" ? parseInt(songId) : null,
       activityType,
-      // Only include budget values if they're valid numbers
+      due_date: null,
+      phase_id: phaseId,
+      project_id: parseInt(projectId),
+      created_by: "",
       ...(plannedBudget && !isNaN(Number(plannedBudget)) ? { planned_budget: Number(plannedBudget) } : {}),
       ...(actualBudget && !isNaN(Number(actualBudget)) ? { actual_budget: Number(actualBudget) } : {}),
+      checklist,
+      comments
     }
 
+    console.log("Wysyłane dane zadania:", taskData)
     onSubmit(taskData)
   }
 
@@ -212,11 +275,13 @@ export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs =
                   </Label>
                   <Select value={songId} onValueChange={setSongId}>
                     <SelectTrigger className="bg-[#403d39] border-[#403d39] text-[#fffcf2]">
-                      <SelectValue placeholder="Wybierz piosenkę" />
+                      <SelectValue placeholder="Wybierz piosenkę">
+                        {songs.find(song => song.id.toString() === songId)?.title}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-[#252422] border-[#403d39]">
                       {songs.map((song) => (
-                        <SelectItem key={song.id} value={song.id} className="text-[#fffcf2]">
+                        <SelectItem key={song.id} value={song.id.toString()} className="text-[#fffcf2]">
                           {song.title}
                         </SelectItem>
                       ))}
@@ -402,7 +467,7 @@ export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs =
                 </div>
 
                 <div className="space-y-2">
-                  {checklist.map((item) => (
+                  {checklist.map((item: ChecklistItem) => (
                     <div key={item.id} className="flex items-center gap-2 bg-[#403d39] p-3 rounded-lg">
                       <Checkbox
                         checked={item.completed}
@@ -414,7 +479,7 @@ export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs =
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => setChecklist(checklist.filter((i) => i.id !== item.id))}
+                        onClick={() => setChecklist(checklist.filter((i: ChecklistItem) => i.id !== item.id))}
                         className="text-[#ccc5b9] hover:text-[#eb5e28]"
                       >
                         <X className="w-4 h-4" />
@@ -444,7 +509,7 @@ export function TaskForm({ taskToEdit, onSubmit, onDelete, selectedSong, songs =
                 </div>
 
                 <div className="space-y-4">
-                  {comments.map((comment) => (
+                  {comments.map((comment: Comment) => (
                     <div key={comment.id} className="bg-[#403d39] p-4 rounded-lg space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="font-medium text-[#fffcf2]">{comment.author}</span>
