@@ -27,27 +27,54 @@ export async function POST(req: Request) {
 
     // Przygotowanie danych do zapisu
     const taskData = {
-      title: data.title,
-      description: data.description || null,
-      status: data.status || "todo",
-      priority: data.priority || "Średni",
-      project_id: parseInt(data.project_id),
-      phase_id: data.phase_id,
-      song_id: data.song_id ? parseInt(data.song_id) : null,
+      title: String(data.title).trim(),
+      description: data.description ? String(data.description).trim() : null,
+      status: String(data.status || "todo"),
+      priority: String(data.priority || "Średni"),
+      project_id: Number(data.project_id),
+      phase_id: String(data.phase_id),
+      song_id: data.song_id ? Number(data.song_id) : null,
       start_date: data.start_date ? new Date(data.start_date) : null,
       end_date: data.end_date ? new Date(data.end_date) : null,
-      created_by: session.user.id,
-      assigned_to: data.assigned_to || [],
-      responsible_user: data.responsible_user || null,
-      planned_budget: data.planned_budget ? parseFloat(data.planned_budget) : null,
-      actual_budget: data.actual_budget ? parseFloat(data.actual_budget) : null
+      due_date: data.due_date ? new Date(data.due_date) : null,
+      created_by: String(session.user.id),
+      responsible_user: data.responsible_user ? String(data.responsible_user) : null
+    }
+
+    if (data.planned_budget) {
+      taskData.planned_budget = Number(data.planned_budget)
+    }
+
+    if (data.actual_budget) {
+      taskData.actual_budget = Number(data.actual_budget)
     }
 
     console.log("Dane do zapisu:", taskData)
 
     const task = await prisma.task.create({
-      data: taskData
+      data: taskData,
+      include: {
+        assignees: {
+          include: {
+            user: true
+          }
+        },
+        responsible: true,
+        creator: true,
+        project: true,
+        song: true
+      }
     })
+
+    // Jeśli są przypisani użytkownicy, dodaj ich
+    if (data.assigned_to?.length > 0) {
+      await prisma.taskAssignee.createMany({
+        data: data.assigned_to.map((userId: string) => ({
+          taskId: task.id,
+          userId: String(userId)
+        }))
+      })
+    }
 
     // Log activity
     await prisma.activity.create({

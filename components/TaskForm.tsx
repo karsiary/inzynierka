@@ -30,26 +30,33 @@ interface Comment {
   timestamp: string
 }
 
+interface User {
+  id: string
+  name: string
+  email: string
+  image?: string
+}
+
 interface TaskData {
   id?: number
   title: string
   description: string | null
   status: string
   priority: string
-  start_date?: string
-  end_date?: string
+  start_date?: string | null
+  end_date?: string | null
   due_date: Date | null
   phase_id: string
   project_id: number
   song_id: number | null
   created_by: string
-  activityType?: string
-  assigned_to?: string[]
-  responsible_user?: string
-  planned_budget?: number
-  actual_budget?: number
-  checklist?: ChecklistItem[]
-  comments?: Comment[]
+  activityType: string | null
+  assigned_to: string[] | null
+  responsible_user: string | null
+  planned_budget: number | null
+  actual_budget: number | null
+  checklist: ChecklistItem[] | null
+  comments: Comment[] | null
 }
 
 interface TaskFormProps {
@@ -60,6 +67,7 @@ interface TaskFormProps {
   songs: Song[]
   projectId: string
   phaseId: string
+  defaultStatus?: string
 }
 
 export function TaskForm({ 
@@ -69,7 +77,8 @@ export function TaskForm({
   selectedSong, 
   songs = [],
   projectId,
-  phaseId
+  phaseId,
+  defaultStatus
 }: TaskFormProps) {
   const [activeTab, setActiveTab] = useState("details")
   const [title, setTitle] = useState(taskToEdit?.title || "")
@@ -80,10 +89,13 @@ export function TaskForm({
   const [endDate, setEndDate] = useState<Date | undefined>(
     taskToEdit?.end_date ? new Date(taskToEdit.end_date) : undefined,
   )
-  const [status, setStatus] = useState(taskToEdit?.status || "todo")
+  const [status, setStatus] = useState(taskToEdit?.status || defaultStatus || "todo")
   const [priority, setPriority] = useState(taskToEdit?.priority || "Średni")
   const [assignedTo, setAssignedTo] = useState(taskToEdit?.assigned_to || [])
   const [responsibleUser, setResponsibleUser] = useState(taskToEdit?.responsible_user || "")
+  const [responsibleUserDetails, setResponsibleUserDetails] = useState<User | null>(null)
+  const [searchResponsibleUser, setSearchResponsibleUser] = useState("")
+  const [responsibleUserResults, setResponsibleUserResults] = useState<User[]>([])
   const [plannedBudget, setPlannedBudget] = useState(taskToEdit?.planned_budget?.toString() || "")
   const [actualBudget, setActualBudget] = useState(taskToEdit?.actual_budget?.toString() || "")
   const [checklist, setChecklist] = useState<ChecklistItem[]>(taskToEdit?.checklist || [])
@@ -101,6 +113,65 @@ export function TaskForm({
       setSongId(selectedSong.toString());
     }
   }, [selectedSong]);
+
+  useEffect(() => {
+    if (searchResponsibleUser.length >= 2) {
+      searchProjectUsers()
+    } else {
+      setResponsibleUserResults([])
+    }
+  }, [searchResponsibleUser])
+
+  useEffect(() => {
+    if (responsibleUser) {
+      fetchResponsibleUserDetails()
+    }
+  }, [responsibleUser])
+
+  const searchProjectUsers = async () => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/users`)
+      if (!response.ok) {
+        throw new Error("Błąd podczas wyszukiwania użytkowników")
+      }
+      const users = await response.json()
+      setResponsibleUserResults(users.filter((user: User) => 
+        user.name.toLowerCase().includes(searchResponsibleUser.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchResponsibleUser.toLowerCase())
+      ))
+    } catch (error) {
+      console.error("Error searching project users:", error)
+      setError("Wystąpił błąd podczas wyszukiwania użytkowników")
+    }
+  }
+
+  const fetchResponsibleUserDetails = async () => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/users`)
+      if (!response.ok) {
+        throw new Error("Błąd podczas pobierania danych użytkownika")
+      }
+      const users = await response.json()
+      const user = users.find((u: any) => u.id === responsibleUser)
+      if (user) {
+        setResponsibleUserDetails(user)
+      }
+    } catch (error) {
+      console.error("Error fetching responsible user details:", error)
+    }
+  }
+
+  const handleSelectResponsibleUser = (user: any) => {
+    setResponsibleUser(user.id)
+    setResponsibleUserDetails(user)
+    setSearchResponsibleUser("")
+    setResponsibleUserResults([])
+  }
+
+  const handleRemoveResponsibleUser = () => {
+    setResponsibleUser("")
+    setResponsibleUserDetails(null)
+  }
 
   console.log("TaskForm - otrzymane piosenki:", songs)
   console.log("TaskForm - wybrany song:", selectedSong)
@@ -141,32 +212,31 @@ export function TaskForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
 
     if (!title.trim()) {
-      setError("Nazwa zadania jest wymagana")
+      setError("Tytuł zadania jest wymagany")
       return
     }
 
     const taskData: TaskData = {
-      title,
-      description,
-      start_date: startDate?.toISOString(),
-      end_date: endDate?.toISOString(),
+      title: title.trim(),
+      description: description.trim() || null,
       status,
       priority,
-      assigned_to: assignedTo,
-      responsible_user: responsibleUser,
-      song_id: songId && songId !== "all" ? parseInt(songId) : null,
-      activityType,
-      due_date: null,
+      start_date: startDate ? startDate.toISOString() : null,
+      end_date: endDate ? endDate.toISOString() : null,
+      due_date: endDate || null,
       phase_id: phaseId,
       project_id: parseInt(projectId),
-      created_by: "",
-      ...(plannedBudget && !isNaN(Number(plannedBudget)) ? { planned_budget: Number(plannedBudget) } : {}),
-      ...(actualBudget && !isNaN(Number(actualBudget)) ? { actual_budget: Number(actualBudget) } : {}),
-      checklist,
-      comments
+      song_id: songId ? parseInt(songId) : null,
+      created_by: "", // To będzie ustawione przez backend
+      activityType: activityType || null,
+      responsible_user: responsibleUser || null,
+      planned_budget: plannedBudget ? parseFloat(plannedBudget) : null,
+      actual_budget: actualBudget ? parseFloat(actualBudget) : null,
+      checklist: checklist.length > 0 ? checklist : null,
+      comments: comments.length > 0 ? comments : null,
+      assigned_to: assignedTo.length > 0 ? assignedTo : null
     }
 
     console.log("Wysyłane dane zadania:", taskData)
@@ -298,26 +368,42 @@ export function TaskForm({
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2]",
-                          !startDate && "text-[#ccc5b9]",
+                          "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2] hover:bg-[#403d39]/80",
+                          !startDate && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {startDate ? format(startDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-[#252422] border border-[#403d39]">
+                    <PopoverContent className="w-auto p-0 bg-[#252422] border-[#403d39]" align="start">
                       <Calendar
                         mode="single"
                         selected={startDate}
                         onSelect={setStartDate}
                         initialFocus
-                        className="text-[#fffcf2]"
+                        className="bg-[#252422] text-[#fffcf2]"
                         classNames={{
-                          day_selected: "bg-[#eb5e28] text-[#fffcf2] hover:bg-[#eb5e28] focus:bg-[#eb5e28]",
-                          day: "text-[#ccc5b9] hover:bg-[#403d39] focus:bg-[#403d39]",
+                          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                          month: "space-y-4",
+                          caption: "flex justify-center pt-1 relative items-center text-[#fffcf2]",
+                          caption_label: "text-sm font-medium text-[#fffcf2]",
+                          nav: "space-x-1 flex items-center",
+                          nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-[#fffcf2]",
+                          nav_button_previous: "absolute left-1",
+                          nav_button_next: "absolute right-1",
+                          table: "w-full border-collapse space-y-1",
+                          head_row: "flex",
+                          head_cell: "text-[#fffcf2] rounded-md w-9 font-normal text-[0.8rem]",
+                          row: "flex w-full mt-2",
+                          cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-[#403d39] first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                          day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-[#fffcf2]",
+                          day_selected: "bg-[#eb5e28] text-[#fffcf2] hover:bg-[#eb5e28] hover:text-[#fffcf2] focus:bg-[#eb5e28] focus:text-[#fffcf2]",
                           day_today: "bg-[#403d39] text-[#fffcf2]",
-                          head_cell: "text-[#ccc5b9]",
+                          day_outside: "text-[#ccc5b9] opacity-50",
+                          day_disabled: "text-[#ccc5b9] opacity-50",
+                          day_range_middle: "aria-selected:bg-[#403d39] aria-selected:text-[#fffcf2]",
+                          day_hidden: "invisible",
                         }}
                       />
                     </PopoverContent>
@@ -333,26 +419,42 @@ export function TaskForm({
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2]",
-                          !endDate && "text-[#ccc5b9]",
+                          "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2] hover:bg-[#403d39]/80",
+                          !endDate && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {endDate ? format(endDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-[#252422] border border-[#403d39]">
+                    <PopoverContent className="w-auto p-0 bg-[#252422] border-[#403d39]" align="start">
                       <Calendar
                         mode="single"
                         selected={endDate}
                         onSelect={setEndDate}
                         initialFocus
-                        className="text-[#fffcf2]"
+                        className="bg-[#252422] text-[#fffcf2]"
                         classNames={{
-                          day_selected: "bg-[#eb5e28] text-[#fffcf2] hover:bg-[#eb5e28] focus:bg-[#eb5e28]",
-                          day: "text-[#ccc5b9] hover:bg-[#403d39] focus:bg-[#403d39]",
+                          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                          month: "space-y-4",
+                          caption: "flex justify-center pt-1 relative items-center text-[#fffcf2]",
+                          caption_label: "text-sm font-medium text-[#fffcf2]",
+                          nav: "space-x-1 flex items-center",
+                          nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-[#fffcf2]",
+                          nav_button_previous: "absolute left-1",
+                          nav_button_next: "absolute right-1",
+                          table: "w-full border-collapse space-y-1",
+                          head_row: "flex",
+                          head_cell: "text-[#fffcf2] rounded-md w-9 font-normal text-[0.8rem]",
+                          row: "flex w-full mt-2",
+                          cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-[#403d39] first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                          day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-[#fffcf2]",
+                          day_selected: "bg-[#eb5e28] text-[#fffcf2] hover:bg-[#eb5e28] hover:text-[#fffcf2] focus:bg-[#eb5e28] focus:text-[#fffcf2]",
                           day_today: "bg-[#403d39] text-[#fffcf2]",
-                          head_cell: "text-[#ccc5b9]",
+                          day_outside: "text-[#ccc5b9] opacity-50",
+                          day_disabled: "text-[#ccc5b9] opacity-50",
+                          day_range_middle: "aria-selected:bg-[#403d39] aria-selected:text-[#fffcf2]",
+                          day_hidden: "invisible",
                         }}
                       />
                     </PopoverContent>
@@ -388,18 +490,66 @@ export function TaskForm({
                   <Label htmlFor="responsibleUser" className="text-[#fffcf2] font-roboto">
                     Osoba odpowiedzialna
                   </Label>
-                  <Select value={responsibleUser} onValueChange={setResponsibleUser}>
-                    <SelectTrigger className="bg-[#403d39] border-[#403d39] text-[#fffcf2]">
-                      <SelectValue placeholder="Wybierz osobę" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#252422] border-[#403d39]">
-                      {teamMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id} className="text-[#fffcf2]">
-                          {member.name} ({member.role})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {responsibleUserDetails ? (
+                    <div className="flex items-center justify-between p-2 bg-[#403d39] rounded-md">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
+                          <span className="text-sm font-semibold text-[#fffcf2]">
+                            {responsibleUserDetails.name.split(" ").map((n: string) => n[0]).join("")}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-[#fffcf2]">{responsibleUserDetails.name}</p>
+                          <p className="text-xs text-[#ccc5b9]">{responsibleUserDetails.email}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveResponsibleUser}
+                        className="h-8 w-8 p-0 hover:bg-[#eb5e28]/20"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Input
+                        id="responsibleUser"
+                        value={searchResponsibleUser}
+                        onChange={(e) => setSearchResponsibleUser(e.target.value)}
+                        placeholder="Wyszukaj osobę..."
+                        className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                      />
+                      {responsibleUserResults.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-[#252422] border border-[#403d39] rounded-md shadow-lg">
+                          <ScrollArea className="h-[200px] rounded-md">
+                            <div className="p-2">
+                              {responsibleUserResults.map((user) => (
+                                <div
+                                  key={user.id}
+                                  className="flex items-center justify-between p-2 cursor-pointer hover:bg-[#403d39] rounded-md"
+                                  onClick={() => handleSelectResponsibleUser(user)}
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
+                                      <span className="text-sm font-semibold text-[#fffcf2]">
+                                        {user.name.split(" ").map((n: string) => n[0]).join("")}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-[#fffcf2]">{user.name}</p>
+                                      <p className="text-xs text-[#ccc5b9]">{user.email}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="col-span-2 space-y-2">
@@ -430,21 +580,23 @@ export function TaskForm({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="actualBudget" className="text-[#fffcf2] font-roboto">
-                    Budżet rzeczywisty
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#ccc5b9]">PLN</span>
-                    <Input
-                      id="actualBudget"
-                      type="number"
-                      value={actualBudget}
-                      onChange={(e) => setActualBudget(e.target.value)}
-                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2] pl-12"
-                    />
+                {taskToEdit && (
+                  <div className="space-y-2">
+                    <Label htmlFor="actualBudget" className="text-[#fffcf2] font-roboto">
+                      Budżet rzeczywisty
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#ccc5b9]">PLN</span>
+                      <Input
+                        id="actualBudget"
+                        type="number"
+                        value={actualBudget}
+                        onChange={(e) => setActualBudget(e.target.value)}
+                        className="bg-[#403d39] border-[#403d39] text-[#fffcf2] pl-12"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </TabsContent>
 
@@ -529,14 +681,23 @@ export function TaskForm({
 
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
-      <div className="flex justify-between px-6 pb-6">
-        {taskToEdit && onDelete && (
-          <Button type="button" variant="destructive" onClick={onDelete} className="mr-auto">
+      <div className="flex justify-end gap-4">
+        {onDelete && (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onDelete}
+            className="bg-red-500 hover:bg-red-600 text-white"
+          >
             <Trash2 className="w-4 h-4 mr-2" />
             Usuń zadanie
           </Button>
         )}
-        <Button type="submit" className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
+        <Button
+          type="submit"
+          onClick={handleSubmit}
+          className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+        >
           {taskToEdit ? "Zapisz zmiany" : "Dodaj zadanie"}
         </Button>
       </div>

@@ -53,6 +53,7 @@ model User {
   songAuthors   SongAuthor[]
   createdTasks  Task[]    @relation("TaskCreator")
   assignedTasks TaskAssignee[]
+  responsibleTasks Task[] @relation("TaskResponsible")
 }
 
 model VerificationToken {
@@ -148,14 +149,20 @@ model Task {
   description String?
   status      String   @default("todo")
   priority    String   @default("Średni")
+  start_date  DateTime?
+  end_date    DateTime?
   due_date    DateTime?
   phase_id    String
   project_id  Int
   song_id     Int?
   created_by  String
+  responsible_user String?
+  planned_budget Float?
+  actual_budget  Float?
   project     Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
   song        Song?    @relation(fields: [song_id], references: [id])
   creator     User     @relation("TaskCreator", fields: [created_by], references: [id])
+  responsible User?    @relation("TaskResponsible", fields: [responsible_user], references: [id])
   assignees   TaskAssignee[]
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt

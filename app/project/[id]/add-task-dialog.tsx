@@ -44,9 +44,12 @@ export function AddTaskDialog({
         phase_id: phaseId,
         status: taskToEdit ? taskToEdit.status : currentColumn,
         song_id: songId === 'all' ? null : parseInt(songId),
+        start_date: taskData.start_date || null,
+        end_date: taskData.end_date || null,
+        due_date: taskData.due_date || null,
         // Only include budget fields if they have values
-        ...(taskData.planned_budget ? { planned_budget: taskData.planned_budget } : {}),
-        ...(taskData.actual_budget ? { actual_budget: taskData.actual_budget } : {}),
+        ...(taskData.planned_budget ? { planned_budget: parseFloat(taskData.planned_budget) } : {}),
+        ...(taskData.actual_budget ? { actual_budget: parseFloat(taskData.actual_budget) } : {}),
       }
 
       console.log("Dane zadania do wysłania:", newTask)
@@ -82,8 +85,8 @@ export function AddTaskDialog({
       onTaskAdded()
       onOpenChange(false)
     } catch (error) {
-      console.error("Error saving task:", error)
-      setError(error.message || "Wystąpił błąd podczas zapisywania zadania")
+      console.error("Error:", error)
+      setError(error.message)
     }
   }
 
@@ -127,6 +130,7 @@ export function AddTaskDialog({
           songs={songs}
           projectId={projectId}
           phaseId={phaseId}
+          defaultStatus={currentColumn}
         />
 
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
