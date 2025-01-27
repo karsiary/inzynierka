@@ -62,7 +62,14 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       )
     }
 
-    const taskId = params.id
+    const taskId = parseInt(params.id)
+
+    if (isNaN(taskId)) {
+      return NextResponse.json(
+        { error: "Nieprawidłowe ID zadania" },
+        { status: 400 }
+      )
+    }
 
     const task = await prisma.task.delete({
       where: { id: taskId }
@@ -72,7 +79,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     await prisma.activity.create({
       data: {
         type: "delete_task",
-        description: `Usunięto zadanie: ${task.name}`,
+        description: `Usunięto zadanie: ${task.title}`,
         userId: session.user.id
       }
     })
