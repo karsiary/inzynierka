@@ -14,27 +14,37 @@ export async function GET(req: Request) {
       )
     }
 
-    const { searchParams } = new URL(req.url)
-    const userId = searchParams.get("userId")
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Missing userId" },
-        { status: 400 }
-      )
-    }
-
-    // Verify that the user is requesting their own projects
-    if (userId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
-
     const projects = await prisma.project.findMany({
       where: {
-        userId: userId,
+        members: {
+          some: {
+            userId: session.user.id,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
+          },
+        },
+        teams: {
+          include: {
+            team: true,
+          },
+        },
+        songs: {
+          include: {
+            author: true,
+          },
+        },
       },
       orderBy: {
         created_at: "desc",
@@ -62,41 +72,105 @@ export async function POST(req: Request) {
       )
     }
 
-    const projectData = await req.json()
+    const {
+      name,
+      description,
+      status,
+      startDate,
+      endDate,
+      budgetType,
+      budgetGlobal,
+      budgetPhases,
+      teams,
+      users,
+      songs,
+    } = await req.json()
+
+    // Walidacja podstawowych danych
+    if (!name) {
+      return NextResponse.json(
+        { error: "Nazwa projektu jest wymagana" },
+        { status: 400 }
+      )
+    }
 
     // Tworzenie projektu
     const project = await prisma.project.create({
       data: {
-        name: projectData.name,
-        status: "active",
-        progress: 0,
-        role: "owner",
-        due_date: projectData.endDate ? new Date(projectData.endDate) : null,
-        phase: "planning",
-        budget_planned: projectData.budgetType === "global" ? projectData.budgetGlobal : 0,
-        budget_actual: 0,
-        userId: session.user.id,
-      }
+        name,
+        description,
+        status,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        budgetType,
+        budgetGlobal: budgetGlobal ? Number(budgetGlobal) : null,
+        budgetPhase1: budgetPhases?.[0] ? Number(budgetPhases[0]) : null,
+        budgetPhase2: budgetPhases?.[1] ? Number(budgetPhases[1]) : null,
+        budgetPhase3: budgetPhases?.[2] ? Number(budgetPhases[2]) : null,
+        budgetPhase4: budgetPhases?.[3] ? Number(budgetPhases[3]) : null,
+        createdById: session.user.id,
+        // Dodawanie członków projektu
+        members: {
+          create: [
+            // Dodaj twórcę jako administratora
+            {
+              userId: session.user.id,
+              role: "admin",
+            },
+            // Dodaj wybranych użytkowników
+            ...users.map((user: any) => ({
+              userId: user.id,
+              role: "member",
+            })),
+          ],
+        },
+        // Dodawanie zespołów
+        teams: {
+          create: teams.map((team: any) => ({
+            teamId: team.id,
+          })),
+        },
+        // Dodawanie piosenek
+        songs: {
+          create: songs.map((song: any) => ({
+            title: song.title,
+            authorId: song.author.id,
+          })),
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
+          },
+        },
+        teams: {
+          include: {
+            team: true,
+          },
+        },
+        songs: {
+          include: {
+            author: true,
+          },
+        },
+      },
     })
 
-    // Dodawanie piosenek
-    if (projectData.songs && projectData.songs.length > 0) {
-      await prisma.song.createMany({
-        data: projectData.songs.map((song: any) => ({
-          name: song.title,
-          status: "pending",
-          projectId: project.id,
-        }))
-      })
-    }
-
-    // Dodawanie wpisu o aktywności
+    // Dodaj wpis o aktywności
     await prisma.activity.create({
       data: {
         type: "create_project",
-        description: `Utworzono projekt: ${projectData.name}`,
+        description: `Utworzono projekt: ${name}`,
         userId: session.user.id,
-      }
+      },
     })
 
     return NextResponse.json(project)

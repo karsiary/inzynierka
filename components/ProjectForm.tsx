@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -25,14 +26,16 @@ import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { pl } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface ProjectFormProps {
-  onSubmit: (projectData: any) => void
+  onSuccess: () => void
   onCancel: () => void
   initialData?: any
 }
 
-export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProps) {
+export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("details")
   const [name, setName] = useState(initialData?.name || "")
   const [description, setDescription] = useState(initialData?.description || "")
@@ -49,45 +52,42 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
   const [budgetPhase2, setBudgetPhase2] = useState(initialData?.budgetPhase2 || "")
   const [budgetPhase3, setBudgetPhase3] = useState(initialData?.budgetPhase3 || "")
   const [budgetPhase4, setBudgetPhase4] = useState(initialData?.budgetPhase4 || "")
-  const [teams, setTeams] = useState(initialData?.teams || [])
-  const [users, setUsers] = useState(initialData?.users || [])
-  const [songs, setSongs] = useState(initialData?.songs || [])
+  const [teams, setTeams] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [songs, setSongs] = useState<any[]>([])
   const [searchTeam, setSearchTeam] = useState("")
   const [searchUser, setSearchUser] = useState("")
   const [newSongTitle, setNewSongTitle] = useState("")
   const [newSongArtist, setNewSongArtist] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [teamSearchResults, setTeamSearchResults] = useState<any[]>([])
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([])
 
   const sampleAuthors = ["Jan Kowalski", "Anna Nowak", "Piotr Wiśniewski", "Maria Kowalczyk", "Tomasz Lewandowski"]
 
-  // Mock data for teams and users (replace with actual data fetching in a real application)
-  const allTeams = [
-    { id: "1", name: "Zespół A" },
-    { id: "2", name: "Zespół B" },
-    { id: "3", name: "Zespół C" },
-  ]
-  const allUsers = [
-    { id: "1", name: "Jan Kowalski" },
-    { id: "2", name: "Anna Nowak" },
-    { id: "3", name: "Piotr Wiśniewski" },
-  ]
-
-  const filteredTeams = allTeams.filter((team) => team.name.toLowerCase().includes(searchTeam.toLowerCase()))
-  const filteredUsers = allUsers.filter((user) => user.name.toLowerCase().includes(searchUser.toLowerCase()))
-
-  const handleAddTeam = (teamId: string) => {
-    const teamToAdd = allTeams.find((team) => team.id === teamId)
-    if (teamToAdd && !teams.some((t) => t.id === teamId)) {
-      setTeams([...teams, teamToAdd])
+  const handleAddTeam = (team: any) => {
+    if (!teams.find(t => t.id === team.id)) {
+      setTeams([...teams, team])
     }
+    setSearchTeam("")
+    setTeamSearchResults([])
   }
 
   const handleRemoveTeam = (teamId: string) => {
-    setTeams(teams.filter((team) => team.id !== teamId))
+    setTeams(teams.filter(team => team.id !== teamId))
+  }
+
+  const handleAddUser = (user: any) => {
+    if (!users.find(u => u.id === user.id)) {
+      setUsers([...users, user])
+    }
+    setSearchUser("")
+    setUserSearchResults([])
   }
 
   const handleRemoveUser = (userId: string) => {
-    setUsers(users.filter((user) => user.id !== userId))
+    setUsers(users.filter(user => user.id !== userId))
   }
 
   const handleAddSong = () => {
@@ -102,7 +102,7 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
     setSongs(songs.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
@@ -111,24 +111,99 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
       return
     }
 
-    const projectData = {
-      name,
-      description,
-      status,
-      startDate: startDate?.toISOString(),
-      endDate: endDate?.toISOString(),
-      budgetType,
-      budgetGlobal: budgetType === "global" ? Number(budgetGlobal) : undefined,
-      budgetPhases:
-        budgetType === "phases"
-          ? [Number(budgetPhase1), Number(budgetPhase2), Number(budgetPhase3), Number(budgetPhase4)]
-          : undefined,
-      teams,
-      users,
-      songs,
+    try {
+      setIsLoading(true)
+
+      const projectData = {
+        name,
+        description,
+        status,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+        budgetType,
+        budgetGlobal: budgetType === "global" ? Number(budgetGlobal) : undefined,
+        budgetPhases:
+          budgetType === "phases"
+            ? [Number(budgetPhase1), Number(budgetPhase2), Number(budgetPhase3), Number(budgetPhase4)]
+            : undefined,
+        teams,
+        users,
+        songs,
+      }
+
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(projectData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Wystąpił błąd podczas tworzenia projektu")
+      }
+
+      const project = await response.json()
+      toast.success("Projekt został utworzony")
+      onSuccess()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const searchTeams = async (query: string) => {
+    if (!query) {
+      setTeamSearchResults([])
+      return
     }
 
-    onSubmit(projectData)
+    try {
+      const response = await fetch(`/api/teams/search?q=${encodeURIComponent(query)}`)
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Błąd wyszukiwania zespołów")
+      }
+      const data = await response.json()
+      setTeamSearchResults(data)
+    } catch (error) {
+      console.error("Error searching teams:", error)
+      toast.error("Wystąpił błąd podczas wyszukiwania zespołów")
+      setTeamSearchResults([])
+    }
+  }
+
+  const searchUsers = async (query: string) => {
+    if (!query) {
+      setUserSearchResults([])
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Błąd wyszukiwania użytkowników")
+      }
+      const data = await response.json()
+      setUserSearchResults(data)
+    } catch (error) {
+      console.error("Error searching users:", error)
+      toast.error("Wystąpił błąd podczas wyszukiwania użytkowników")
+      setUserSearchResults([])
+    }
+  }
+
+  const addSong = (song: any) => {
+    if (!songs.find(s => s.title === song.title)) {
+      setSongs([...songs, song])
+    }
+  }
+
+  const removeSong = (songTitle: string) => {
+    setSongs(songs.filter(s => s.title !== songTitle))
   }
 
   return (
@@ -330,18 +405,30 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-[#fffcf2] font-roboto">Dodaj zespół</Label>
-                  <Select onValueChange={handleAddTeam}>
-                    <SelectTrigger className="bg-[#403d39] border-[#403d39] text-[#fffcf2]">
-                      <SelectValue placeholder="Wybierz zespół" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#252422] border-[#403d39]">
-                      {filteredTeams.map((team) => (
-                        <SelectItem key={team.id} value={team.id} className="text-[#fffcf2]">
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Input
+                      value={searchTeam}
+                      onChange={(e) => {
+                        setSearchTeam(e.target.value)
+                        searchTeams(e.target.value)
+                      }}
+                      placeholder="Wyszukaj zespół"
+                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                    />
+                    {teamSearchResults.length > 0 && searchTeam && (
+                      <div className="border rounded-md p-2 bg-[#252422] border-[#403d39]">
+                        {teamSearchResults.map((team) => (
+                          <div
+                            key={team.id}
+                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2]"
+                            onClick={() => handleAddTeam(team)}
+                          >
+                            {team.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {teams.map((team) => (
@@ -367,26 +454,29 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-[#fffcf2] font-roboto">Dodaj użytkownika</Label>
-                  <div className="flex space-x-2">
+                  <div className="space-y-2">
                     <Input
-                      type="email"
-                      placeholder="Wyszukaj użytkownika po email"
                       value={searchUser}
-                      onChange={(e) => setSearchUser(e.target.value)}
-                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2] text-white"
-                    />
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        if (searchUser && !users.some((u) => u.email === searchUser)) {
-                          setUsers([...users, { id: Date.now().toString(), name: searchUser, email: searchUser }])
-                          setSearchUser("")
-                        }
+                      onChange={(e) => {
+                        setSearchUser(e.target.value)
+                        searchUsers(e.target.value)
                       }}
-                      className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
-                    >
-                      Dodaj
-                    </Button>
+                      placeholder="Wyszukaj użytkownika"
+                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                    />
+                    {userSearchResults.length > 0 && searchUser && (
+                      <div className="border rounded-md p-2 bg-[#252422] border-[#403d39]">
+                        {userSearchResults.map((user) => (
+                          <div
+                            key={user.id}
+                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2]"
+                            onClick={() => handleAddUser(user)}
+                          >
+                            {user.name} ({user.email})
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -396,7 +486,7 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
                       variant="secondary"
                       className="bg-[#403d39] text-[#fffcf2] flex items-center gap-1"
                     >
-                      {user.email}
+                      {user.name}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -482,8 +572,8 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
         >
           Anuluj
         </Button>
-        <Button type="submit" className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
-          {initialData ? "Zapisz zmiany" : "Utwórz projekt"}
+        <Button type="submit" className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90" disabled={isLoading}>
+          {isLoading ? "Tworzenie..." : "Utwórz projekt"}
         </Button>
       </DialogFooter>
     </form>

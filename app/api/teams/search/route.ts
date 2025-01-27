@@ -21,38 +21,46 @@ export async function GET(req: Request) {
       return NextResponse.json([])
     }
 
-    const users = await prisma.user.findMany({
+    // Wyszukaj zespoły, do których należy użytkownik
+    const teams = await prisma.team.findMany({
       where: {
-        OR: [
-          {
-            email: {
-              contains: query,
-            },
-          },
+        AND: [
           {
             name: {
               contains: query,
             },
           },
+          {
+            members: {
+              some: {
+                userId: session.user.id,
+              },
+            },
+          },
         ],
-        NOT: {
-          id: session.user.id, // Wykluczenie zalogowanego użytkownika
-        },
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
+          },
+        },
       },
       take: 5,
     })
 
-    return NextResponse.json(users)
+    return NextResponse.json(teams)
   } catch (error) {
-    console.error("Error searching users:", error)
+    console.error("Error searching teams:", error)
     return NextResponse.json(
-      { error: "Wystąpił błąd podczas wyszukiwania użytkowników" },
+      { error: "Wystąpił błąd podczas wyszukiwania zespołów" },
       { status: 500 }
     )
   }
