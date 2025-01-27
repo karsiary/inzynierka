@@ -1,13 +1,28 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus, MoreHorizontal, Trash2 } from "lucide-react"
 import { AddTaskDialog } from "./add-task-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import dynamic from "next/dynamic"
+
+const DragDropContext = dynamic(
+  () => import("@hello-pangea/dnd").then(mod => mod.DragDropContext),
+  { ssr: false }
+)
+
+const Droppable = dynamic(
+  () => import("@hello-pangea/dnd").then(mod => mod.Droppable),
+  { ssr: false }
+)
+
+const Draggable = dynamic(
+  () => import("@hello-pangea/dnd").then(mod => mod.Draggable),
+  { ssr: false }
+)
 
 interface Task {
   id: number
@@ -29,6 +44,13 @@ interface Column {
   tasks: Task[]
 }
 
+interface ColumnType {
+  todo: Column;
+  inProgress: Column;
+  done: Column;
+  [key: string]: Column;
+}
+
 interface KanbanBoardProps {
   projectId: string
   phaseId: string
@@ -38,7 +60,8 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted, songs }: KanbanBoardProps) {
-  const [columns, setColumns] = useState<Record<string, Column>>({
+  const [mounted, setMounted] = useState(false)
+  const [columns, setColumns] = useState<ColumnType>({
     todo: {
       id: "todo",
       title: "Do zrobienia",
@@ -61,8 +84,14 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   useEffect(() => {
-    fetchTasks()
-  }, [projectId, phaseId, selectedSong])
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      fetchTasks()
+    }
+  }, [projectId, phaseId, selectedSong, mounted])
 
   const fetchTasks = async () => {
     try {
@@ -75,14 +104,31 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
 
       const tasksData = await response.json()
 
-      const newColumns = { ...columns }
-      Object.values(newColumns).forEach((column) => {
-        column.tasks = []
-      })
+      // Tworzymy nowy obiekt kolumn
+      const newColumns = {
+        todo: {
+          id: "todo",
+          title: "Do zrobienia",
+          tasks: [],
+        },
+        inProgress: {
+          id: "inProgress",
+          title: "W trakcie",
+          tasks: [],
+        },
+        done: {
+          id: "done",
+          title: "Zakończone",
+          tasks: [],
+        },
+      }
 
+      // Grupujemy zadania po statusie, zapobiegając duplikatom
+      const processedTaskIds = new Set()
       tasksData.forEach((task: Task) => {
-        if (newColumns[task.status]) {
+        if (!processedTaskIds.has(task.id) && newColumns[task.status]) {
           newColumns[task.status].tasks.push(task)
+          processedTaskIds.add(task.id)
         }
       })
 
@@ -96,44 +142,92 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
   }
 
   const onDragEnd = async (result: any) => {
-    const { destination, source, draggableId } = result
+    const { destination, source, draggableId } = result;
+    console.log('Drag result:', result);
 
-    if (!destination) return
+    if (!destination) return;
 
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      return
+    if (
+        destination.droppableId === source.droppableId &&
+        destination.index === source.index
+    ) {
+        return;
     }
 
-    setColumns((prevColumns) => {
-      const newColumns = { ...prevColumns }
-      const sourceColumn = newColumns[source.droppableId]
-      const destColumn = newColumns[destination.droppableId]
-      const draggedTask = sourceColumn.tasks[source.index]
+    const sourceColumn = columns[source.droppableId];
+    const destColumn = columns[destination.droppableId];
+    
+    // Tworzymy kopie list zadań
+    const sourceTasks = Array.from(sourceColumn.tasks);
+    const destTasks = Array.from(destColumn.tasks);
+    
+    // Usuwamy zadanie ze źródłowej kolumny
+    const [movedTask] = sourceTasks.splice(source.index, 1);
+    
+    // Jeśli przenosimy w tej samej kolumnie
+    if (source.droppableId === destination.droppableId) {
+        sourceTasks.splice(destination.index, 0, movedTask);
+        
+        const newColumns = {
+            ...columns,
+            [source.droppableId]: {
+                ...sourceColumn,
+                tasks: sourceTasks,
+            },
+        };
+        
+        setColumns(newColumns);
+    } else {
+        // Sprawdzamy, czy zadanie już istnieje w kolumnie docelowej
+        const taskExists = destTasks.some(task => task.id === movedTask.id);
+        if (taskExists) {
+            console.log('Task already exists in destination column');
+            return;
+        }
+        
+        // Aktualizujemy status zadania
+        const updatedTask = { ...movedTask, status: destination.droppableId };
+        destTasks.splice(destination.index, 0, updatedTask);
+        
+        const newColumns = {
+            ...columns,
+            [source.droppableId]: {
+                ...sourceColumn,
+                tasks: sourceTasks,
+            },
+            [destination.droppableId]: {
+                ...destColumn,
+                tasks: destTasks,
+            },
+        };
+        
+        setColumns(newColumns);
+        
+        try {
+            const response = await fetch(`/api/tasks/${draggableId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: destination.droppableId }),
+            });
 
-      sourceColumn.tasks.splice(source.index, 1)
-      destColumn.tasks.splice(destination.index, 0, { ...draggedTask, status: destination.droppableId })
-
-      return newColumns
-    })
-
-    try {
-      const response = await fetch(`/api/tasks/${draggableId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: destination.droppableId }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Błąd podczas aktualizacji statusu zadania')
-      }
-    } catch (error) {
-      console.error("Error updating task status:", error)
-      setError("Nie udało się zaktualizować statusu zadania. Spróbuj ponownie.")
-      fetchTasks()
+            if (!response.ok) {
+                throw new Error('Błąd podczas aktualizacji statusu zadania');
+            }
+        } catch (error) {
+            console.error("Error updating task status:", error);
+            setError("Nie udało się zaktualizować statusu zadania. Spróbuj ponownie.");
+            
+            // Przywracamy poprzedni stan w przypadku błędu
+            setColumns({
+                ...columns,
+                [source.droppableId]: sourceColumn,
+                [destination.droppableId]: destColumn,
+            });
+        }
     }
-  }
+  };
 
   const deleteTask = async (taskId: number) => {
     try {
@@ -157,6 +251,23 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
     setIsAddTaskOpen(true)
   }
 
+  if (!mounted) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {Object.values(columns).map((column) => (
+          <div key={column.id} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">{column.title}</h3>
+            </div>
+            <div className="h-[calc(100vh-400px)] overflow-y-auto bg-gradient-to-b from-[#252422] to-[#2a2826] rounded-xl p-6 space-y-4 scrollbar-hide border border-[#eb5e28]/30">
+              <div className="animate-pulse bg-[#403d39] h-24 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   if (error) {
     return <div className="text-red-500 text-center py-4">{error}</div>
   }
@@ -165,8 +276,8 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {Object.values(columns).map((column) => (
-          <div key={column.id} className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div key={column.id} className="flex flex-col h-[calc(100vh-400px)]">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">{column.title}</h3>
               {!isSongCompleted && (
                 <Button variant="ghost" size="icon" className="text-[#ccc5b9]" onClick={() => handleAddTask(column.id)}>
@@ -180,16 +291,23 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                 <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
-                  className="h-[calc(100vh-400px)] overflow-y-auto bg-gradient-to-b from-[#252422] to-[#2a2826] rounded-xl p-6 space-y-4 scrollbar-hide border border-[#eb5e28]/30 shadow-lg shadow-[#eb5e28]/5 transition-all duration-300 hover:shadow-xl hover:shadow-[#eb5e28]/10"
+                  className="flex-1 bg-gradient-to-b from-[#252422] to-[#2a2826] rounded-xl p-6 border border-[#eb5e28]/30 shadow-lg shadow-[#eb5e28]/5 transition-all duration-300 hover:shadow-xl hover:shadow-[#eb5e28]/10"
+                  style={{ overflowY: 'auto', minHeight: '100px' }}
                 >
                   {column.tasks.map((task, index) => (
-                    <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
-                      {(provided) => (
+                    <Draggable 
+                      key={task.id} 
+                      draggableId={task.id ? task.id.toString() : `temp-${index}`} 
+                      index={index}
+                    >
+                      {(provided, snapshot) => (
                         <Card
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="bg-[#403d39] border-none p-4 cursor-pointer hover:bg-[#403d39]/80 transition-colors"
+                          className={`bg-[#403d39] border-none p-4 cursor-pointer hover:bg-[#403d39]/80 transition-colors mb-4 ${
+                            snapshot.isDragging ? 'shadow-lg ring-2 ring-[#eb5e28]/50' : ''
+                          }`}
                           onClick={() => setEditingTask(task)}
                         >
                           <div className="flex items-start justify-between">
@@ -230,7 +348,10 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-56 bg-[#252422] border-[#403d39]">
                                   <DropdownMenuItem
-                                    onClick={() => deleteTask(task.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteTask(task.id);
+                                    }}
                                     className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />

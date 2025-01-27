@@ -15,18 +15,28 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 
     const data = await req.json()
-    const taskId = params.id
+    const taskId = parseInt(params.id)
 
+    if (isNaN(taskId)) {
+      return NextResponse.json(
+        { error: "Nieprawidłowe ID zadania" },
+        { status: 400 }
+      )
+    }
+
+    // Aktualizujemy tylko status
     const task = await prisma.task.update({
       where: { id: taskId },
-      data
+      data: {
+        status: data.status
+      }
     })
 
     // Log activity
     await prisma.activity.create({
       data: {
-        type: "update_task",
-        description: `Zaktualizowano zadanie: ${task.name}`,
+        type: "update_task_status",
+        description: `Zmieniono status zadania "${task.title}" na ${data.status}`,
         userId: session.user.id
       }
     })
