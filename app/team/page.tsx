@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Search, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,47 +12,76 @@ import { Card } from "@/components/ui/card"
 import { AddTeamDialog } from "./add-team-dialog"
 import { TeamDetailsDialog } from "./TeamDetailsDialog"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
-
-// Przykładowe dane zespołów
-const teams = [
-  {
-    id: 1,
-    name: "Zespół Producencki A",
-    members: [
-      { id: 1, name: "Jan Kowalski", avatar: "JK", role: "Producent" },
-      { id: 2, name: "Anna Nowak", avatar: "AN", role: "Inżynier dźwięku" },
-      { id: 3, name: "Piotr Wiśniewski", avatar: "PW", role: "Artysta" },
-    ],
-    createdAt: "2024-01-15",
-    lastActive: "2024-01-20",
-  },
-  {
-    id: 2,
-    name: "Studio Nagrań XYZ",
-    members: [
-      { id: 4, name: "Maria Kowalczyk", avatar: "MK", role: "Inżynier dźwięku" },
-      { id: 5, name: "Tomasz Lewandowski", avatar: "TL", role: "Producent" },
-    ],
-    createdAt: "2024-01-10",
-    lastActive: "2024-01-19",
-  },
-]
+import { useSession, signOut } from "next-auth/react"
+import type { Team } from "@/types"
 
 export default function TeamPage() {
+  const [teams, setTeams] = useState<Team[]>([])
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false)
-  const [selectedTeam, setSelectedTeam] = useState<(typeof teams)[0] | null>(null)
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [isTeamDetailsOpen, setIsTeamDetailsOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
   const pathname = usePathname()
+  const router = useRouter()
+  const { data: session, status } = useSession()
 
-  const handleTeamClick = (team: (typeof teams)[0]) => {
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchTeams()
+    } else if (status === "unauthenticated") {
+      router.push("/login")
+    }
+  }, [status])
+
+  const fetchTeams = async () => {
+    try {
+      const response = await fetch("/api/teams")
+      if (!response.ok) {
+        throw new Error("Błąd podczas pobierania zespołów")
+      }
+      const data = await response.json()
+      setTeams(data)
+    } catch (error) {
+      console.error("Error fetching teams:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleTeamClick = (team: Team) => {
     setSelectedTeam(team)
     setIsTeamDetailsOpen(true)
   }
 
-  const handleSaveTeam = (updatedTeam: (typeof teams)[0]) => {
-    // In a real application, you would update the team in your database here
-    console.log("Saving updated team:", updatedTeam)
+  const handleSaveTeam = async (updatedTeam: Team) => {
+    try {
+      const response = await fetch(`/api/teams/${updatedTeam.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedTeam),
+      })
+
+      if (!response.ok) {
+        throw new Error("Błąd podczas aktualizacji zespołu")
+      }
+
+      await fetchTeams()
+      setIsTeamDetailsOpen(false)
+    } catch (error) {
+      console.error("Error updating team:", error)
+    }
   }
+
+  if (status === "loading") {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>
+  }
+
+  const userInitials = session?.user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("") || "U"
 
   return (
     <div className="min-h-screen bg-[#252422]">
@@ -114,13 +143,13 @@ export default function TeamPage() {
               <Settings className="w-5 h-5" />
               <span className="font-roboto">Ustawienia</span>
             </Link>
-            <Link
-              href="/logout"
-              className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39]"
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39] w-full text-left"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-roboto">Wyloguj</span>
-            </Link>
+            </button>
           </div>
         </aside>
 
@@ -135,7 +164,7 @@ export default function TeamPage() {
             <div className="flex items-center gap-4">
               <NotificationsPopover />
               <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center">
-                <span className="text-[#fffcf2] font-semibold font-montserrat">JK</span>
+                <span className="text-[#fffcf2] font-semibold font-montserrat">{userInitials}</span>
               </div>
             </div>
           </div>
@@ -190,37 +219,57 @@ export default function TeamPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teams.map((team) => (
-                  <TableRow
-                    key={team.id}
-                    className="border-[#252422] hover:bg-[#403d39]/80 cursor-pointer"
-                    onClick={() => handleTeamClick(team)}
-                  >
-                    <TableCell className="font-medium text-[#fffcf2]">{team.name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div className="flex -space-x-2">
-                          {team.members.slice(0, 3).map((member, index) => (
-                            <div
-                              key={member.id}
-                              className="w-8 h-8 rounded-full bg-[#252422] flex items-center justify-center border-2 border-[#403d39]"
-                              title={member.name}
-                            >
-                              <span className="text-xs text-[#ccc5b9]">{member.avatar}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {team.members.length > 3 && (
-                          <div className="w-8 h-8 rounded-full bg-[#252422] flex items-center justify-center border-2 border-[#403d39] -ml-2">
-                            <span className="text-xs text-[#ccc5b9]">+{team.members.length - 3}</span>
-                          </div>
-                        )}
-                      </div>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-[#ccc5b9]">
+                      Ładowanie zespołów...
                     </TableCell>
-                    <TableCell className="text-[#ccc5b9]">{new Date(team.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-[#ccc5b9]">{new Date(team.lastActive).toLocaleDateString()}</TableCell>
                   </TableRow>
-                ))}
+                ) : teams.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-[#ccc5b9]">
+                      Brak zespołów do wyświetlenia
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  teams.map((team) => (
+                    <TableRow
+                      key={team.id}
+                      className="border-[#252422] hover:bg-[#403d39]/80 cursor-pointer"
+                      onClick={() => handleTeamClick(team)}
+                    >
+                      <TableCell className="font-medium text-[#fffcf2]">{team.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <div className="flex -space-x-2">
+                            {team.members.slice(0, 3).map((member) => (
+                              <div
+                                key={member.id}
+                                className="w-8 h-8 rounded-full bg-[#252422] flex items-center justify-center border-2 border-[#403d39]"
+                                title={member.user.name || ""}
+                              >
+                                <span className="text-xs text-[#ccc5b9]">
+                                  {member.user.name?.split(" ").map((n) => n[0]).join("") || "U"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {team.members.length > 3 && (
+                            <div className="w-8 h-8 rounded-full bg-[#252422] flex items-center justify-center border-2 border-[#403d39] -ml-2">
+                              <span className="text-xs text-[#ccc5b9]">+{team.members.length - 3}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-[#ccc5b9]">
+                        {new Date(team.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-[#ccc5b9]">
+                        {new Date(team.updated_at).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -228,7 +277,11 @@ export default function TeamPage() {
       </div>
 
       {/* Add Team Dialog */}
-      <AddTeamDialog open={isAddTeamOpen} onOpenChange={setIsAddTeamOpen} />
+      <AddTeamDialog
+        open={isAddTeamOpen}
+        onOpenChange={setIsAddTeamOpen}
+        onTeamAdded={fetchTeams}
+      />
       <TeamDetailsDialog
         open={isTeamDetailsOpen}
         onOpenChange={setIsTeamDetailsOpen}

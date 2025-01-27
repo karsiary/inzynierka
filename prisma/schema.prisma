@@ -48,6 +48,7 @@ model User {
   sessions      Session[]
   projects      Project[]
   activities    Activity[]
+  teams         TeamMember[]
 }
 
 model VerificationToken {
@@ -106,4 +107,25 @@ model Activity {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   created_at  DateTime @default(now())
+}
+
+model Team {
+  id          Int          @id @default(autoincrement())
+  name        String
+  members     TeamMember[]
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+}
+
+model TeamMember {
+  id        Int      @id @default(autoincrement())
+  teamId    Int
+  userId    String
+  role      String   @default("member")
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([teamId, userId])
 } 

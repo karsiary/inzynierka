@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,44 +18,93 @@ import { Search, X } from "lucide-react"
 interface AddTeamDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onTeamAdded: () => void
 }
 
-export function AddTeamDialog({ open, onOpenChange }: AddTeamDialogProps) {
+interface User {
+  id: string
+  name: string | null
+  email: string | null
+}
+
+export function AddTeamDialog({ open, onOpenChange, onTeamAdded }: AddTeamDialogProps) {
   const [teamName, setTeamName] = useState("")
   const [searchMember, setSearchMember] = useState("")
-  const [selectedMembers, setSelectedMembers] = useState<Array<{ id: number; name: string; email: string }>>([])
+  const [selectedMembers, setSelectedMembers] = useState<User[]>([])
+  const [searchResults, setSearchResults] = useState<User[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Przykładowi użytkownicy do wyszukiwania
-  const availableUsers = [
-    { id: 1, name: "Jan Kowalski", email: "jan@example.com" },
-    { id: 2, name: "Anna Nowak", email: "anna@example.com" },
-    { id: 3, name: "Piotr Wiśniewski", email: "piotr@example.com" },
-    { id: 4, name: "Maria Kowalczyk", email: "maria@example.com" },
-  ]
+  useEffect(() => {
+    if (searchMember.length >= 2) {
+      searchUsers()
+    } else {
+      setSearchResults([])
+    }
+  }, [searchMember])
 
-  const filteredUsers = availableUsers.filter(
-    (user) =>
-      !selectedMembers.find((member) => member.id === user.id) &&
-      (user.name.toLowerCase().includes(searchMember.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchMember.toLowerCase())),
-  )
+  const searchUsers = async () => {
+    try {
+      const response = await fetch(`/api/users/search?query=${encodeURIComponent(searchMember)}`)
+      if (!response.ok) {
+        throw new Error("Błąd podczas wyszukiwania użytkowników")
+      }
+      const data = await response.json()
+      setSearchResults(data)
+    } catch (error) {
+      console.error("Error searching users:", error)
+      setError("Wystąpił błąd podczas wyszukiwania użytkowników")
+    }
+  }
 
-  const handleAddMember = (user: { id: number; name: string; email: string }) => {
-    setSelectedMembers([...selectedMembers, user])
+  const handleAddMember = (user: User) => {
+    if (!selectedMembers.find(member => member.id === user.id)) {
+      setSelectedMembers([...selectedMembers, user])
+    }
     setSearchMember("")
   }
 
-  const handleRemoveMember = (userId: number) => {
+  const handleRemoveMember = (userId: string) => {
     setSelectedMembers(selectedMembers.filter((member) => member.id !== userId))
   }
 
-  const handleSubmit = () => {
-    // Handle form submission
-    console.log({
-      teamName,
-      members: selectedMembers,
-    })
-    onOpenChange(false)
+  const handleSubmit = async () => {
+    if (!teamName.trim()) {
+      setError("Nazwa zespołu jest wymagana")
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/teams", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: teamName,
+          members: selectedMembers.map(member => ({
+            userId: member.id,
+          })),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Błąd podczas tworzenia zespołu")
+      }
+
+      setTeamName("")
+      setSelectedMembers([])
+      onTeamAdded()
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Error creating team:", error)
+      setError("Wystąpił błąd podczas tworzenia zespołu")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -117,10 +166,10 @@ export function AddTeamDialog({ open, onOpenChange }: AddTeamDialogProps) {
             </div>
 
             {/* Search Results */}
-            {searchMember && (
+            {searchMember.length >= 2 && (
               <ScrollArea className="h-[200px] rounded-md border border-[#403d39] bg-[#252422] p-4">
                 <div className="space-y-2">
-                  {filteredUsers.map((user) => (
+                  {searchResults.map((user) => (
                     <div
                       key={user.id}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-[#403d39] cursor-pointer"
@@ -135,11 +184,15 @@ export function AddTeamDialog({ open, onOpenChange }: AddTeamDialogProps) {
                       </Button>
                     </div>
                   ))}
-                  {filteredUsers.length === 0 && <p className="text-[#ccc5b9] text-center py-4">Brak wyników</p>}
+                  {searchResults.length === 0 && <p className="text-[#ccc5b9] text-center py-4">Brak wyników</p>}
                 </div>
               </ScrollArea>
             )}
           </div>
+
+          {error && (
+            <div className="text-red-500 text-sm">{error}</div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
@@ -150,8 +203,12 @@ export function AddTeamDialog({ open, onOpenChange }: AddTeamDialogProps) {
           >
             Anuluj
           </Button>
-          <Button onClick={handleSubmit} className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
-            Utwórz zespół
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading}
+            className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+          >
+            {loading ? "Tworzenie..." : "Utwórz zespół"}
           </Button>
         </DialogFooter>
       </DialogContent>

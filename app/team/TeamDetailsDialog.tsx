@@ -13,23 +13,30 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { X, Plus, Mail } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { X, Plus, Search } from "lucide-react"
+import { useSession } from "next-auth/react"
+
+interface User {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
+}
 
 interface TeamMember {
-  id: number
-  name: string
-  avatar: string
-  role: string
-  confirmed: boolean
-  updateRole: (newRole: string) => void
+  id: string
+  userId: string
+  role: "admin" | "member"
+  user: User
 }
 
 interface Team {
   id: number
   name: string
   members: TeamMember[]
-  createdAt: string
-  lastActive: string
+  created_at: string
+  updated_at: string
 }
 
 interface TeamDetailsDialogProps {
@@ -41,51 +48,81 @@ interface TeamDetailsDialogProps {
 
 export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDetailsDialogProps) {
   const [editedTeam, setEditedTeam] = useState<Team | null>(null)
-  const [newMemberEmail, setNewMemberEmail] = useState("")
-  const [newMemberRole, setNewMemberRole] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<User[]>([])
+  const { data: session } = useSession()
 
   useEffect(() => {
     setEditedTeam(team)
   }, [team])
 
-  if (!editedTeam) return null
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      searchUsers()
+    } else {
+      setSearchResults([])
+    }
+  }, [searchQuery])
+
+  const searchUsers = async () => {
+    try {
+      const response = await fetch(`/api/users/search?query=${encodeURIComponent(searchQuery)}`)
+      if (!response.ok) {
+        throw new Error("Błąd podczas wyszukiwania użytkowników")
+      }
+      const data = await response.json()
+      // Filtrujemy użytkowników, którzy są już w zespole
+      const filteredUsers = data.filter(
+        (user: User) => !editedTeam?.members.some(member => member.user.id === user.id)
+      )
+      setSearchResults(filteredUsers)
+    } catch (error) {
+      console.error("Error searching users:", error)
+    }
+  }
+
+  if (!editedTeam || !session?.user?.id) return null
 
   const handleSave = () => {
     if (editedTeam) {
       onSave(editedTeam)
-      onOpenChange(false)
     }
   }
 
-  const handleRemoveMember = (memberId: number) => {
-    setEditedTeam((prev) => ({
+  const handleRemoveMember = (memberId: string) => {
+    // Nie pozwalamy na usunięcie administratora
+    const member = editedTeam.members.find(m => m.id === memberId)
+    if (member?.role === "admin" && member.user.id === session.user.id) {
+      return
+    }
+
+    setEditedTeam(prev => ({
       ...prev!,
-      members: prev!.members.filter((member) => member.id !== memberId),
+      members: prev!.members.filter(member => member.id !== memberId)
     }))
   }
 
-  const handleAddMember = () => {
-    if (newMemberEmail && newMemberRole) {
-      const newMember: TeamMember = {
-        id: Date.now(),
-        name: newMemberEmail.split("@")[0],
-        avatar: newMemberEmail.substring(0, 2).toUpperCase(),
-        role: newMemberRole,
-        confirmed: false,
-        updateRole: (newRole: string) => {
-          setEditedTeam((prev) => ({
-            ...prev!,
-            members: prev!.members.map((m) => (m.id === newMember.id ? { ...m, role: newRole } : m)),
-          }))
-        },
-      }
-      setEditedTeam((prev) => ({
-        ...prev!,
-        members: [...prev!.members, newMember],
-      }))
-      setNewMemberEmail("")
-      setNewMemberRole("")
+  const handleAddMember = (user: User) => {
+    // Generujemy tymczasowe ID dla nowego członka
+    const tempId = `temp-${Date.now()}`
+    
+    const newMember: TeamMember = {
+      id: tempId,
+      userId: user.id,
+      role: "member",
+      user: user
     }
+
+    setEditedTeam(prev => ({
+      ...prev!,
+      members: [...prev!.members, newMember]
+    }))
+    setSearchQuery("")
+  }
+
+  const getUserInitials = (name: string | null) => {
+    if (!name) return "U"
+    return name.split(" ").map(n => n[0]).join("")
   }
 
   return (
@@ -117,89 +154,100 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
               <div key={member.id} className="flex items-center justify-between bg-[#403d39] p-3 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
-                    <span className="text-sm font-semibold text-[#fffcf2]">{member.avatar}</span>
+                    <span className="text-sm font-semibold text-[#fffcf2]">
+                      {getUserInitials(member.user.name)}
+                    </span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-[#fffcf2]">{member.name}</p>
-                    <Select
-                      value={member.role}
-                      onValueChange={(newRole) => {
-                        const updatedMembers = editedTeam.members.map((m) =>
-                          m.id === member.id ? { ...m, role: newRole } : m,
-                        )
-                        setEditedTeam({ ...editedTeam, members: updatedMembers })
-                      }}
-                    >
-                      <SelectTrigger className="w-[140px] h-8 text-xs bg-[#252422] border-none text-[#ccc5b9]">
-                        <SelectValue placeholder="Wybierz rolę" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#252422] border-[#403d39]">
-                        <SelectItem value="Producent" className="text-[#fffcf2]">
-                          Producent
-                        </SelectItem>
-                        <SelectItem value="Inżynier dźwięku" className="text-[#fffcf2]">
-                          Inżynier dźwięku
-                        </SelectItem>
-                        <SelectItem value="Artysta" className="text-[#fffcf2]">
-                          Artysta
-                        </SelectItem>
-                        <SelectItem value="Menadżer" className="text-[#fffcf2]">
-                          Menadżer
-                        </SelectItem>
-                        <SelectItem value="Edytor" className="text-[#fffcf2]">
-                          Edytor
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <p className="text-sm font-medium text-[#fffcf2]">{member.user.name}</p>
+                    <p className="text-xs text-[#ccc5b9]">{member.user.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {!member.confirmed && (
-                    <span className="text-xs text-[#eb5e28] bg-[#eb5e28]/10 px-2 py-1 rounded-full">
-                      niepotwierdzony
-                    </span>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveMember(member.id)}
-                    className="text-[#ccc5b9] hover:text-[#eb5e28]"
+                  <Select
+                    value={member.role}
+                    onValueChange={(newRole: "admin" | "member") => {
+                      // Nie pozwalamy na zmianę roli administratora
+                      if (member.role === "admin" && member.user.id === session.user.id) {
+                        return
+                      }
+                      
+                      setEditedTeam(prev => ({
+                        ...prev!,
+                        members: prev!.members.map(m => 
+                          m.id === member.id ? { ...m, role: newRole } : m
+                        )
+                      }))
+                    }}
+                    disabled={member.role === "admin" && member.user.id === session.user.id}
                   >
-                    <X className="w-4 h-4" />
-                  </Button>
+                    <SelectTrigger className="w-[140px] h-8 text-xs bg-[#252422] border-none text-[#ccc5b9]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#252422] border-[#403d39]">
+                      <SelectItem value="admin" className="text-[#fffcf2]">
+                        Administrator
+                      </SelectItem>
+                      <SelectItem value="member" className="text-[#fffcf2]">
+                        Członek
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {member.role !== "admin" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveMember(member.id)}
+                      className="text-[#ccc5b9] hover:text-[#eb5e28]"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
-          </div>
 
-          <div className="space-y-4">
-            <Label className="text-lg text-[#fffcf2] font-roboto">Dodaj nowego członka</Label>
-            <div className="flex space-x-2">
-              <Input
-                placeholder="Email"
-                value={newMemberEmail}
-                onChange={(e) => setNewMemberEmail(e.target.value)}
-                className="bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
-              />
-              <Select value={newMemberRole} onValueChange={setNewMemberRole}>
-                <SelectTrigger className="w-[180px] bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2]">
-                  <SelectValue placeholder="Rola" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#252422] border-[#403d39]">
-                  <SelectItem value="Producent" className="text-[#fffcf2]">
-                    Producent
-                  </SelectItem>
-                  <SelectItem value="Inżynier dźwięku" className="text-[#fffcf2]">
-                    Inżynier dźwięku
-                  </SelectItem>
-                  <SelectItem value="Artysta" className="text-[#fffcf2]">
-                    Artysta
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAddMember} className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
-                <Plus className="w-4 h-4" />
-              </Button>
+            {/* Wyszukiwanie i dodawanie nowych członków */}
+            <div className="space-y-4">
+              <Label className="text-lg text-[#fffcf2] font-roboto">Dodaj nowego członka</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#ccc5b9]" />
+                <Input
+                  placeholder="Wyszukaj użytkowników..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
+                />
+              </div>
+
+              {searchQuery.length >= 2 && searchResults.length > 0 && (
+                <ScrollArea className="h-[200px] rounded-md border border-[#403d39] bg-[#252422] p-4">
+                  <div className="space-y-2">
+                    {searchResults.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-[#403d39] cursor-pointer"
+                        onClick={() => handleAddMember(user)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
+                            <span className="text-sm font-semibold text-[#fffcf2]">
+                              {getUserInitials(user.name)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[#fffcf2]">{user.name}</p>
+                            <p className="text-xs text-[#ccc5b9]">{user.email}</p>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" className="hover:bg-[#eb5e28]/20 hover:text-[#fffcf2]">
+                          Dodaj
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
           </div>
         </div>
