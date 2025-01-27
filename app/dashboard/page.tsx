@@ -7,7 +7,6 @@ import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar,
 import Link from "next/link"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { usePathname, useRouter } from "next/navigation"
-import { fetchUserProjects, fetchUserStats, fetchProjectActivity } from "@/lib/dataFetchers"
 import { AddProjectDialog } from "@/components/AddProjectDialog"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { format } from "date-fns"
@@ -22,6 +21,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null)
   const [activityData, setActivityData] = useState<any[]>([])
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
     if (!session?.user?.id) {
@@ -29,14 +29,21 @@ export default function DashboardPage() {
       return
     }
 
-    const userProjects = await fetchUserProjects(session.user.id)
-    setProjects(userProjects)
-
-    const userStats = await fetchUserStats(session.user.id)
-    setStats(userStats)
-
-    const activity = await fetchProjectActivity(session.user.id)
-    setActivityData(activity)
+    try {
+      const response = await fetch("/api/dashboard")
+      if (!response.ok) {
+        throw new Error("Błąd podczas pobierania danych")
+      }
+      const data = await response.json()
+      
+      setProjects(data.projects)
+      setStats(data.stats)
+      setActivityData(data.activity)
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }, [router, session])
 
   useEffect(() => {
@@ -47,7 +54,7 @@ export default function DashboardPage() {
     }
   }, [status, fetchData])
 
-  if (status === "loading" || !stats) {
+  if (status === "loading" || isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
 
@@ -156,7 +163,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-[#ccc5b9] text-sm font-open-sans">Aktywne Projekty</p>
-                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats.activeProjects}</h3>
+                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.activeProjects || 0}</h3>
                 </div>
               </div>
             </Card>
@@ -167,7 +174,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-[#ccc5b9] text-sm font-open-sans">Członkowie Zespołu</p>
-                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats.teamMembers}</h3>
+                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.teamMembers || 0}</h3>
                 </div>
               </div>
             </Card>
@@ -178,7 +185,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-[#ccc5b9] text-sm font-open-sans">Ukończone Projekty</p>
-                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats.completedProjects}</h3>
+                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.completedProjects || 0}</h3>
                 </div>
               </div>
             </Card>
@@ -189,7 +196,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-[#ccc5b9] text-sm font-open-sans">Nadchodzące Terminy</p>
-                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats.upcomingDeadlines}</h3>
+                  <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.upcomingDeadlines || 0}</h3>
                 </div>
               </div>
             </Card>
@@ -239,7 +246,7 @@ export default function DashboardPage() {
                 </Button>
               </div>
               <div className="space-y-4">
-                {stats.recentActivity.map((activity: any, index: number) => (
+                {stats?.recentActivity.map((activity: any, index: number) => (
                   <div key={index} className="flex items-center gap-4">
                     <div className="w-2 h-2 rounded-full bg-[#eb5e28]" />
                     <div>
@@ -265,7 +272,7 @@ export default function DashboardPage() {
               </Button>
             </div>
             <div className="space-y-4">
-              {projects.map((project, index) => (
+              {projects.map((project) => (
                 <Link
                   href={`/project/${project.id}`}
                   key={project.id}

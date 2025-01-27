@@ -27,6 +27,7 @@ import { format } from "date-fns"
 import { pl } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { useSession } from "next-auth/react"
 
 interface ProjectFormProps {
   onSuccess: () => void
@@ -36,6 +37,7 @@ interface ProjectFormProps {
 
 export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormProps) {
   const router = useRouter()
+  const session = useSession()
   const [activeTab, setActiveTab] = useState("details")
   const [name, setName] = useState(initialData?.name || "")
   const [description, setDescription] = useState(initialData?.description || "")
@@ -58,7 +60,9 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
   const [searchTeam, setSearchTeam] = useState("")
   const [searchUser, setSearchUser] = useState("")
   const [newSongTitle, setNewSongTitle] = useState("")
-  const [newSongArtist, setNewSongArtist] = useState("")
+  const [searchSongAuthor, setSearchSongAuthor] = useState("")
+  const [currentSongAuthors, setCurrentSongAuthors] = useState<any[]>([])
+  const [songAuthorSearchResults, setSongAuthorSearchResults] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [teamSearchResults, setTeamSearchResults] = useState<any[]>([])
@@ -90,11 +94,26 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
     setUsers(users.filter(user => user.id !== userId))
   }
 
+  const handleAddSongAuthor = (author: any) => {
+    if (!currentSongAuthors.find(a => a.id === author.id)) {
+      setCurrentSongAuthors([...currentSongAuthors, author])
+    }
+    setSearchSongAuthor("")
+    setSongAuthorSearchResults([])
+  }
+
+  const handleRemoveSongAuthor = (authorId: string) => {
+    setCurrentSongAuthors(currentSongAuthors.filter(author => author.id !== authorId))
+  }
+
   const handleAddSong = () => {
-    if (newSongTitle && newSongArtist) {
-      setSongs([...songs, { title: newSongTitle, author: newSongArtist }])
+    if (newSongTitle && currentSongAuthors.length > 0) {
+      setSongs([...songs, { 
+        title: newSongTitle, 
+        authors: currentSongAuthors
+      }])
       setNewSongTitle("")
-      setNewSongArtist("")
+      setCurrentSongAuthors([])
     }
   }
 
@@ -114,22 +133,22 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
     try {
       setIsLoading(true)
 
-      const projectData = {
-        name,
-        description,
-        status,
-        startDate: startDate?.toISOString(),
-        endDate: endDate?.toISOString(),
-        budgetType,
-        budgetGlobal: budgetType === "global" ? Number(budgetGlobal) : undefined,
-        budgetPhases:
-          budgetType === "phases"
-            ? [Number(budgetPhase1), Number(budgetPhase2), Number(budgetPhase3), Number(budgetPhase4)]
-            : undefined,
-        teams,
-        users,
-        songs,
-      }
+    const projectData = {
+      name,
+      description,
+      status,
+      startDate: startDate?.toISOString(),
+      endDate: endDate?.toISOString(),
+      budgetType,
+      budgetGlobal: budgetType === "global" ? Number(budgetGlobal) : undefined,
+      budgetPhases:
+        budgetType === "phases"
+          ? [Number(budgetPhase1), Number(budgetPhase2), Number(budgetPhase3), Number(budgetPhase4)]
+          : undefined,
+      teams,
+      users,
+      songs,
+    }
 
       const response = await fetch("/api/projects", {
         method: "POST",
@@ -196,14 +215,39 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
     }
   }
 
-  const addSong = (song: any) => {
-    if (!songs.find(s => s.title === song.title)) {
-      setSongs([...songs, song])
+  const searchSongAuthors = async (query: string) => {
+    if (!query) {
+      setSongAuthorSearchResults([])
+      return
     }
-  }
 
-  const removeSong = (songTitle: string) => {
-    setSongs(songs.filter(s => s.title !== songTitle))
+    try {
+      // Wyszukaj użytkowników
+      const usersResponse = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
+      if (!usersResponse.ok) {
+        throw new Error("Błąd wyszukiwania użytkowników")
+      }
+      const users = await usersResponse.json()
+
+      // Wyszukaj zespoły
+      const teamsResponse = await fetch(`/api/teams/search?q=${encodeURIComponent(query)}`)
+      if (!teamsResponse.ok) {
+        throw new Error("Błąd wyszukiwania zespołów")
+      }
+      const teams = await teamsResponse.json()
+
+      // Połącz wyniki, dodając typ dla rozróżnienia
+      const results = [
+        ...users.map((user: any) => ({ ...user, type: 'user' })),
+        ...teams.map((team: any) => ({ ...team, type: 'team' }))
+      ]
+
+      setSongAuthorSearchResults(results)
+    } catch (error) {
+      console.error("Error searching authors:", error)
+      toast.error("Wystąpił błąd podczas wyszukiwania autorów")
+      setSongAuthorSearchResults([])
+    }
   }
 
   return (
@@ -423,9 +467,9 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                             className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2]"
                             onClick={() => handleAddTeam(team)}
                           >
-                            {team.name}
+                          {team.name}
                           </div>
-                        ))}
+                      ))}
                       </div>
                     )}
                   </div>
@@ -503,7 +547,6 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
 
             <TabsContent value="songs" className="space-y-6">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="newSongTitle" className="text-[#fffcf2] font-roboto">
                       Tytuł piosenki
@@ -513,27 +556,63 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                       value={newSongTitle}
                       onChange={(e) => setNewSongTitle(e.target.value)}
                       className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                    placeholder="Wprowadź tytuł piosenki"
                     />
                   </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[#fffcf2] font-roboto">Autorzy</Label>
                   <div className="space-y-2">
-                    <Label htmlFor="newSongAuthor" className="text-[#fffcf2] font-roboto">
-                      Autor
-                    </Label>
-                    <Select value={newSongArtist} onValueChange={setNewSongArtist}>
-                      <SelectTrigger id="newSongAuthor" className="bg-[#403d39] border-[#403d39] text-[#fffcf2]">
-                        <SelectValue placeholder="Wybierz autora" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#252422] border-[#403d39]">
-                        {sampleAuthors.map((author) => (
-                          <SelectItem key={author} value={author} className="text-[#fffcf2]">
-                            {author}
-                          </SelectItem>
+                    <Input
+                      value={searchSongAuthor}
+                      onChange={(e) => {
+                        setSearchSongAuthor(e.target.value)
+                        searchSongAuthors(e.target.value)
+                      }}
+                      placeholder="Wyszukaj autora (użytkownik lub zespół)"
+                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                    />
+                    {songAuthorSearchResults.length > 0 && searchSongAuthor && (
+                      <div className="border rounded-md p-2 bg-[#252422] border-[#403d39]">
+                        {songAuthorSearchResults.map((author) => (
+                          <div
+                            key={`${author.type}-${author.id}`}
+                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2]"
+                            onClick={() => handleAddSongAuthor(author)}
+                          >
+                            {author.name} ({author.type === 'user' ? 'Użytkownik' : 'Zespół'})
+                          </div>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {currentSongAuthors.map((author) => (
+                      <Badge
+                        key={`${author.type}-${author.id}`}
+                        variant="secondary"
+                        className="bg-[#403d39] text-[#fffcf2] flex items-center gap-1"
+                      >
+                        {author.name} ({author.type === 'user' ? 'Użytkownik' : 'Zespół'})
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-transparent"
+                          onClick={() => handleRemoveSongAuthor(author.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ))}
                   </div>
                 </div>
-                <Button type="button" onClick={handleAddSong} className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
+
+                <Button 
+                  type="button" 
+                  onClick={handleAddSong} 
+                  className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+                  disabled={!newSongTitle || currentSongAuthors.length === 0}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Dodaj piosenkę
                 </Button>
@@ -543,7 +622,9 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                   <div key={index} className="flex items-center justify-between bg-[#403d39] p-3 rounded-lg">
                     <div>
                       <p className="text-[#fffcf2] font-medium">{song.title}</p>
-                      <p className="text-[#ccc5b9] text-sm">{song.author}</p>
+                      <p className="text-[#ccc5b9] text-sm">
+                        {song.authors.map((author: any) => author.name).join(", ")}
+                      </p>
                     </div>
                     <Button
                       variant="ghost"

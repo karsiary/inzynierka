@@ -49,6 +49,8 @@ model User {
   projects      Project[]
   activities    Activity[]
   teams         TeamMember[]
+  projectMembers ProjectMember[]
+  songAuthors   SongAuthor[]
 }
 
 model VerificationToken {
@@ -62,28 +64,78 @@ model VerificationToken {
 model Project {
   id             Int       @id @default(autoincrement())
   name           String
+  description    String?
   status         String    @default("active")
   progress       Float     @default(0)
-  role          String    @default("member")
+  role           String    @default("member")
+  startDate      DateTime?
+  endDate        DateTime?
   due_date       DateTime?
   phase          String    @default("planning")
+  budgetType     String    @default("global")
+  budgetGlobal   Float?
+  budgetPhase1   Float?
+  budgetPhase2   Float?
+  budgetPhase3   Float?
+  budgetPhase4   Float?
   budget_planned Float     @default(0)
   budget_actual  Float     @default(0)
   userId         String
   user           User      @relation(fields: [userId], references: [id])
+  members        ProjectMember[]
+  teams          ProjectTeam[]
   songs          Song[]
   tasks          Task[]
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
 }
 
+model ProjectMember {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    String
+  role      String   @default("member")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([projectId, userId])
+}
+
+model ProjectTeam {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  teamId    Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([projectId, teamId])
+}
+
 model Song {
   id        Int      @id @default(autoincrement())
-  name      String
+  title     String
   status    String   @default("pending")
   projectId Int
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authors   SongAuthor[]
   tasks     Task[]
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model SongAuthor {
+  id        Int      @id @default(autoincrement())
+  songId    Int
+  userId    String?
+  teamId    Int?
+  type      String
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
@@ -113,6 +165,8 @@ model Team {
   id          Int          @id @default(autoincrement())
   name        String
   members     TeamMember[]
+  projects    ProjectTeam[]
+  songAuthors SongAuthor[]
   created_at  DateTime     @default(now())
   updated_at  DateTime     @updatedAt
 }

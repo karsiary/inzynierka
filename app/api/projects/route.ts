@@ -108,7 +108,11 @@ export async function POST(req: Request) {
         budgetPhase2: budgetPhases?.[1] ? Number(budgetPhases[1]) : null,
         budgetPhase3: budgetPhases?.[2] ? Number(budgetPhases[2]) : null,
         budgetPhase4: budgetPhases?.[3] ? Number(budgetPhases[3]) : null,
-        createdById: session.user.id,
+        user: {
+          connect: {
+            id: session.user.id
+          }
+        },
         // Dodawanie członków projektu
         members: {
           create: [
@@ -134,7 +138,13 @@ export async function POST(req: Request) {
         songs: {
           create: songs.map((song: any) => ({
             title: song.title,
-            authorId: song.author.id,
+            authors: {
+              create: song.authors.map((author: any) => ({
+                type: author.type,
+                ...(author.type === 'user' ? { userId: author.id } : {}),
+                ...(author.type === 'team' ? { teamId: author.id } : {}),
+              })),
+            },
           })),
         },
       },
@@ -158,7 +168,12 @@ export async function POST(req: Request) {
         },
         songs: {
           include: {
-            author: true,
+            authors: {
+              include: {
+                user: true,
+                team: true,
+              },
+            },
           },
         },
       },
