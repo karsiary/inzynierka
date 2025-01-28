@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { X, Plus } from "lucide-react"
+import { X, Plus, User, Users } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon } from "lucide-react"
@@ -77,6 +77,18 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
 
   const sampleAuthors = ["Jan Kowalski", "Anna Nowak", "Piotr Wiśniewski", "Maria Kowalczyk", "Tomasz Lewandowski"]
 
+  // Dodaj zalogowanego użytkownika do listy users podczas inicjalizacji
+  useEffect(() => {
+    if (session?.data?.user && users.length === 0) {
+      setUsers([{
+        id: session.data.user.id,
+        name: session.data.user.name,
+        email: session.data.user.email,
+        image: session.data.user.image
+      }])
+    }
+  }, [session?.data?.user])
+
   const handleAddTeam = (team: any) => {
     if (!teams.find(t => t.id === team.id)) {
       setTeams([...teams, team])
@@ -90,14 +102,20 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
   }
 
   const handleAddUser = (user: any) => {
-    if (!users.find(u => u.id === user.id)) {
-      setUsers([...users, user])
+    // Nie dodawaj użytkownika jeśli już jest na liście
+    if (users.some(u => u.id === user.id)) {
+      return
     }
+    setUsers([...users, user])
     setSearchUser("")
     setUserSearchResults([])
   }
 
   const handleRemoveUser = (userId: string) => {
+    // Nie pozwól na usunięcie zalogowanego użytkownika
+    if (userId === session?.data?.user?.id) {
+      return
+    }
     setUsers(users.filter(user => user.id !== userId))
   }
 
@@ -244,29 +262,49 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
     }
 
     try {
-      // Wyszukaj użytkowników
-      const usersResponse = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
-      if (!usersResponse.ok) {
-        throw new Error("Błąd wyszukiwania użytkowników")
-      }
-      const users = await usersResponse.json()
+      // Pobierz zalogowanego użytkownika
+      const currentUser = session?.data?.user
+      
+      // Przygotuj listę wyników
+      let results = []
 
-      // Wyszukaj zespoły
-      const teamsResponse = await fetch(`/api/teams/search?q=${encodeURIComponent(query)}`)
-      if (!teamsResponse.ok) {
-        throw new Error("Błąd wyszukiwania zespołów")
-      }
-      const teams = await teamsResponse.json()
+      // Wyszukaj wśród dodanych użytkowników (zalogowany użytkownik już tam jest)
+      const usersResults = users.filter(user => 
+        user.name?.toLowerCase().includes(query.toLowerCase()) || 
+        user.email?.toLowerCase().includes(query.toLowerCase())
+      ).map(user => ({
+        ...user,
+        type: 'user'
+      }))
 
-      // Połącz wyniki, dodając typ dla rozróżnienia
-      const results = [
-        ...users.map((user: any) => ({ ...user, type: 'user' })),
-        ...teams.map((team: any) => ({ ...team, type: 'team' }))
-      ]
+      // Wyszukaj wśród dodanych zespołów
+      const teamsResults = teams.filter(team =>
+        team.name.toLowerCase().includes(query.toLowerCase())
+      ).map(team => ({
+        ...team,
+        type: 'team'
+      }))
 
+      // Wyszukaj wśród członków dodanych zespołów
+      const teamMembersResults = teams.flatMap(team => 
+        team.members?.filter(member => 
+          (member.user.name?.toLowerCase().includes(query.toLowerCase()) || 
+           member.user.email?.toLowerCase().includes(query.toLowerCase())) &&
+          !users.some(u => u.id === member.user.id) // Nie duplikuj użytkowników już dodanych bezpośrednio
+        ).map(member => ({
+          id: member.user.id,
+          name: member.user.name,
+          email: member.user.email,
+          image: member.user.image,
+          type: 'user',
+          teamName: team.name // Dodajemy informację z którego zespołu pochodzi użytkownik
+        })) || []
+      )
+
+      results = [...usersResults, ...teamsResults, ...teamMembersResults]
       setSongAuthorSearchResults(results)
     } catch (error) {
-      console.error("Error searching authors:", error)
+      console.error("Error searching song authors:", error)
       toast.error("Wystąpił błąd podczas wyszukiwania autorów")
       setSongAuthorSearchResults([])
     }
@@ -527,12 +565,13 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                         {teamSearchResults.map((team) => (
                           <div
                             key={team.id}
-                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2]"
+                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center gap-2"
                             onClick={() => handleAddTeam(team)}
                           >
-                          {team.name}
+                            <span>{team.name}</span>
+                            <Users className="h-4 w-4" />
                           </div>
-                      ))}
+                        ))}
                       </div>
                     )}
                   </div>
@@ -576,10 +615,11 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                         {userSearchResults.map((user) => (
                           <div
                             key={user.id}
-                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2]"
+                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center gap-2"
                             onClick={() => handleAddUser(user)}
                           >
-                            {user.name} ({user.email})
+                            <span>{user.name}</span>
+                            <User className="h-4 w-4" />
                           </div>
                         ))}
                       </div>
@@ -594,14 +634,16 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                       className="bg-[#403d39] text-[#fffcf2] flex items-center gap-1"
                     >
                       {user.name}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 hover:bg-transparent"
-                        onClick={() => handleRemoveUser(user.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+                      {user.id !== session?.data?.user?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-transparent"
+                          onClick={() => handleRemoveUser(user.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
                     </Badge>
                   ))}
                 </div>
@@ -643,10 +685,16 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                         {songAuthorSearchResults.map((author) => (
                           <div
                             key={`${author.type}-${author.id}`}
-                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2]"
+                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center gap-2"
                             onClick={() => handleAddSongAuthor(author)}
                           >
-                            {author.name} ({author.type === 'user' ? 'Użytkownik' : 'Zespół'})
+                            <span>{author.name}</span>
+                            {author.teamName && <span className="text-[#ccc5b9] text-sm">z {author.teamName}</span>}
+                            {author.type === 'user' ? (
+                              <User className="h-4 w-4" />
+                            ) : (
+                              <Users className="h-4 w-4" />
+                            )}
                           </div>
                         ))}
                       </div>
