@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Music2, ChevronLeft, ChevronRight } from "lucide-react"
+import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Music2, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { usePathname, useRouter } from "next/navigation"
@@ -12,6 +12,8 @@ import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { format } from "date-fns"
 import { pl } from "date-fns/locale"
 import { useSession, signOut } from "next-auth/react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export default function DashboardPage() {
   const pathname = usePathname()
@@ -24,6 +26,8 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalProjects, setTotalProjects] = useState(0)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<number | null>(null)
   const projectsPerPage = 4
 
   const fetchData = useCallback(async () => {
@@ -69,6 +73,26 @@ export default function DashboardPage() {
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(prev => prev + 1)
+    }
+  }
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return
+
+    try {
+      const response = await fetch(`/api/projects/${projectToDelete}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Błąd podczas usuwania projektu')
+      }
+
+      setIsDeleteDialogOpen(false)
+      setProjectToDelete(null)
+      fetchData()
+    } catch (error) {
+      console.error("Error deleting project:", error)
     }
   }
 
@@ -291,12 +315,8 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-4">
               {projects.map((project) => (
-                <Link
-                  href={`/project/${project.id}`}
-                  key={project.id}
-                  className="bg-[#252422] rounded-lg p-4 flex items-center justify-between hover:bg-[#252422]/80 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
+                <div key={project.id} className="bg-[#252422] rounded-lg p-4 flex items-center justify-between hover:bg-[#252422]/80 transition-colors">
+                  <Link href={`/project/${project.id}`} className="flex items-center gap-4 flex-1">
                     <div className="w-10 h-10 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
                       <Music2 className="w-5 h-5 text-[#eb5e28]" />
                     </div>
@@ -306,7 +326,7 @@ export default function DashboardPage() {
                         {project.role} • Termin: {new Date(project.due_date).toLocaleDateString()}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-sm text-[#ccc5b9] font-open-sans">{project.status}</p>
@@ -315,8 +335,28 @@ export default function DashboardPage() {
                     <div className="w-24 h-2 bg-[#403d39] rounded-full overflow-hidden">
                       <div className="h-full bg-[#eb5e28] rounded-full" style={{ width: `${project.progress}%` }} />
                     </div>
+                    {project.userId === session?.user?.id && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-[#ccc5b9] hover:text-[#fffcf2]">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#252422] border-[#403d39]">
+                          <DropdownMenuItem 
+                            className="text-red-500 focus:text-red-500 focus:bg-[#403d39]"
+                            onClick={() => {
+                              setProjectToDelete(project.id)
+                              setIsDeleteDialogOpen(true)
+                            }}
+                          >
+                            Usuń projekt
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
             
@@ -352,6 +392,32 @@ export default function DashboardPage() {
           <AddProjectDialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen} onProjectAdded={fetchData} />
         </main>
       </div>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-[#252422] border-[#403d39] text-[#fffcf2]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Potwierdzenie usunięcia</DialogTitle>
+            <DialogDescription className="text-[#ccc5b9]">
+              Czy na pewno chcesz usunąć ten projekt? Ta akcja jest nieodwracalna.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="text-[#ccc5b9] hover:text-[#fffcf2] hover:bg-[#403d39]"
+            >
+              Anuluj
+            </Button>
+            <Button
+              onClick={handleDeleteProject}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Usuń projekt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

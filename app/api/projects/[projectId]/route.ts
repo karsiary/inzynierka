@@ -101,4 +101,119 @@ export async function GET(
       { status: 500 }
     )
   }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { projectId: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    const projectId = parseInt(params.projectId, 10)
+
+    if (isNaN(projectId)) {
+      return NextResponse.json(
+        { error: "Invalid project ID" },
+        { status: 400 }
+      )
+    }
+
+    // Sprawdź czy projekt istnieje i czy użytkownik ma do niego uprawnienia
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        members: true,
+        teams: true,
+        songs: {
+          include: {
+            authors: true
+          }
+        }
+      }
+    })
+
+    if (!project) {
+      return NextResponse.json(
+        { error: "Project not found" },
+        { status: 404 }
+      )
+    }
+
+    // Sprawdź czy użytkownik jest właścicielem projektu
+    if (project.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized - only project owner can delete the project" },
+        { status: 403 }
+      )
+    }
+
+    // Usuń wszystkie powiązane dane w odpowiedniej kolejności
+    await prisma.$transaction(async (prisma) => {
+      // 1. Usuń wszystkie zadania projektu i ich powiązane dane
+      const tasks = await prisma.task.findMany({
+        where: { project_id: projectId },
+        select: { id: true }
+      })
+      
+      for (const task of tasks) {
+        // Usuń komentarze zadania
+        await prisma.comment.deleteMany({
+          where: { task_id: task.id }
+        })
+        
+        // Usuń elementy checklisty zadania
+        await prisma.checklistItem.deleteMany({
+          where: { task_id: task.id }
+        })
+      }
+      
+      // Usuń wszystkie zadania projektu
+      await prisma.task.deleteMany({
+        where: { project_id: projectId }
+      })
+
+      // 2. Usuń powiązania z zespołami
+      await prisma.projectTeam.deleteMany({
+        where: { projectId }
+      })
+
+      // 3. Usuń członków projektu
+      await prisma.projectMember.deleteMany({
+        where: { projectId }
+      })
+
+      // 4. Usuń autorów piosenek
+      for (const song of project.songs) {
+        await prisma.songAuthor.deleteMany({
+          where: { songId: song.id }
+        })
+      }
+
+      // 5. Usuń piosenki
+      await prisma.song.deleteMany({
+        where: { projectId }
+      })
+
+      // 6. Na końcu usuń sam projekt
+      await prisma.project.delete({
+        where: { id: projectId }
+      })
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting project:", error)
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
+  }
 } 
