@@ -141,7 +141,11 @@ function BaseTaskForm({
   const [error, setError] = useState("")
   const [isTitleInvalid, setIsTitleInvalid] = useState(false)
   const [isActivityTypeInvalid, setIsActivityTypeInvalid] = useState(false)
-  const [songId, setSongId] = useState(selectedSong && selectedSong !== "all" ? selectedSong.toString() : "")
+  const [songId, setSongId] = useState(
+    taskToEdit?.song_id 
+      ? taskToEdit.song_id.toString() 
+      : (selectedSong && selectedSong !== "all" ? selectedSong.toString() : "")
+  )
   const [activityType, setActivityType] = useState(taskToEdit?.activityType || "")
 
   useEffect(() => {
@@ -151,12 +155,10 @@ function BaseTaskForm({
   }, [taskToEdit])
 
   useEffect(() => {
-    console.log("TaskForm - useEffect dla selectedSong:", selectedSong);
-    if (selectedSong && selectedSong !== "all") {
-      console.log("TaskForm - ustawianie songId na:", selectedSong);
+    if (selectedSong && selectedSong !== "all" && !taskToEdit) {
       setSongId(selectedSong.toString());
     }
-  }, [selectedSong]);
+  }, [selectedSong, taskToEdit]);
 
   useEffect(() => {
     if (searchResponsibleUser.length >= 2) {
