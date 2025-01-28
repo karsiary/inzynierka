@@ -762,22 +762,6 @@ function BaseTaskForm({
 
             <TabsContent value="comments" className="space-y-6">
               <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Dodaj komentarz..."
-                    className="bg-[#403d39] border-[#403d39] text-[#fffcf2] min-h-[100px]"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddComment}
-                    className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
-                  >
-                    Dodaj
-                  </Button>
-                </div>
-
                 <div className="space-y-4">
                   {comments.map((comment: Comment) => (
                     <div key={comment.id} className="bg-[#403d39] p-4 rounded-lg space-y-2">
@@ -798,6 +782,24 @@ function BaseTaskForm({
       </Tabs>
 
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+      {activeTab === "comments" && (
+        <div className="flex gap-2">
+          <Textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Dodaj komentarz..."
+            className="bg-[#403d39] border-[#403d39] text-[#fffcf2] min-h-[100px]"
+          />
+          <Button
+            type="button"
+            onClick={handleAddComment}
+            className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+          >
+            Dodaj
+          </Button>
+        </div>
+      )}
 
       <div className="flex justify-end gap-4">
         {onDelete && (
