@@ -1,9 +1,20 @@
 import { Card } from "@/components/ui/card"
 import { Calendar, DollarSign, Clock } from "lucide-react"
-import type { Project } from "@/types/supabase"
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(amount)
+}
+
+interface Project {
+  budget_planned: number
+  phase: string
+  due_date: string
+  budgetType: string
+  budgetGlobal?: number
+  budgetPhase1?: number
+  budgetPhase2?: number
+  budgetPhase3?: number
+  budgetPhase4?: number
 }
 
 interface ProjectStatsProps {
@@ -12,16 +23,14 @@ interface ProjectStatsProps {
   selectedSong: string | null
 }
 
-export type Project = {
-  // ... other properties
-  budget_planned: number
-  phase: string
-  due_date: string
-  // ... other properties
-}
-
 export function ProjectStats({ project, currentPhase, selectedSong }: ProjectStatsProps) {
   const remainingDays = Math.ceil((new Date(project.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+
+  console.log("ProjectStats - dane projektu:", {
+    budgetType: project.budgetType,
+    budgetGlobal: project.budgetGlobal,
+    budgetPhases: [project.budgetPhase1, project.budgetPhase2, project.budgetPhase3, project.budgetPhase4]
+  });
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -71,7 +80,15 @@ export function ProjectStats({ project, currentPhase, selectedSong }: ProjectSta
                         : "Nieznana"}
               </p>
               <h3 className="text-xl font-bold text-[#fffcf2] font-montserrat">
-                {formatCurrency(project.budget_planned / 4)} {/* Assuming equal distribution across 4 phases */}
+                {formatCurrency(
+                  project.budgetType === 'phases' 
+                    ? (currentPhase === "1" ? project.budgetPhase1 || 0
+                      : currentPhase === "2" ? project.budgetPhase2 || 0
+                      : currentPhase === "3" ? project.budgetPhase3 || 0
+                      : currentPhase === "4" ? project.budgetPhase4 || 0
+                      : 0)
+                    : (project.budgetGlobal || 0) / 4
+                )}
               </h3>
             </div>
           </div>
@@ -85,7 +102,10 @@ export function ProjectStats({ project, currentPhase, selectedSong }: ProjectSta
             <div>
               <p className="text-[#ccc5b9] text-sm font-open-sans">Budżet globalny</p>
               <h3 className="text-xl font-bold text-[#fffcf2] font-montserrat">
-                {formatCurrency(project.budget_planned)}
+                {formatCurrency(project.budgetType === 'global' ? 
+                  (project.budgetGlobal || 0) : 
+                  ((project.budgetPhase1 || 0) + (project.budgetPhase2 || 0) + (project.budgetPhase3 || 0) + (project.budgetPhase4 || 0))
+                )}
               </h3>
             </div>
           </div>
