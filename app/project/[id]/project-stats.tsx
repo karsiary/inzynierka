@@ -1,11 +1,13 @@
 import { Card } from "@/components/ui/card"
 import { Calendar, DollarSign, Clock } from "lucide-react"
+import { useEffect, useState } from "react"
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(amount)
 }
 
 interface Project {
+  id: number
   budget_planned: number
   phase: string
   due_date: string
@@ -24,7 +26,25 @@ interface ProjectStatsProps {
 }
 
 export function ProjectStats({ project, currentPhase, selectedSong }: ProjectStatsProps) {
-  const remainingDays = Math.ceil((new Date(project.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+  const [remainingDays, setRemainingDays] = useState<string | number>("...")
+
+  useEffect(() => {
+    const fetchRemainingDays = async () => {
+      try {
+        const response = await fetch(`/api/projects/${project.id}/remaining-days`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch remaining days')
+        }
+        const data = await response.json()
+        setRemainingDays(data.remainingDays)
+      } catch (error) {
+        console.error('Error fetching remaining days:', error)
+        setRemainingDays("Błąd")
+      }
+    }
+
+    fetchRemainingDays()
+  }, [project.id])
 
   console.log("ProjectStats - dane projektu:", {
     budgetType: project.budgetType,
@@ -118,7 +138,9 @@ export function ProjectStats({ project, currentPhase, selectedSong }: ProjectSta
             </div>
             <div>
               <p className="text-[#ccc5b9] text-sm font-open-sans">Pozostało dni</p>
-              <h3 className="text-xl font-bold text-[#fffcf2] font-montserrat">{remainingDays} dni</h3>
+              <h3 className="text-xl font-bold text-[#fffcf2] font-montserrat">
+                {typeof remainingDays === 'number' ? `${remainingDays} dni` : remainingDays}
+              </h3>
             </div>
           </div>
         </Card>

@@ -164,13 +164,7 @@ export default function ProjectPage() {
         {/* Project Stats */}
         <ProjectStats
           project={project}
-          currentPhase={
-            selectedSong !== "all"
-              ? completedSongs[selectedSong]
-                ? "Zakończona"
-                : songPhases[selectedSong] || "1"
-              : currentPhase
-          }
+          currentPhase={viewPhase}
           selectedSong={selectedSong}
         />
 
