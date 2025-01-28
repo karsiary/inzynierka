@@ -66,7 +66,7 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
 
   const searchUsers = async () => {
     try {
-      const response = await fetch(`/api/users/search?query=${encodeURIComponent(searchQuery)}`)
+      const response = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`)
       if (!response.ok) {
         throw new Error("Błąd podczas wyszukiwania użytkowników")
       }

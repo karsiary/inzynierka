@@ -45,7 +45,7 @@ export function AddTeamDialog({ open, onOpenChange, onTeamAdded }: AddTeamDialog
 
   const searchUsers = async () => {
     try {
-      const response = await fetch(`/api/users/search?query=${encodeURIComponent(searchMember)}`)
+      const response = await fetch(`/api/users/search?q=${encodeURIComponent(searchMember)}`)
       if (!response.ok) {
         throw new Error("Błąd podczas wyszukiwania użytkowników")
       }
