@@ -100,6 +100,7 @@ export async function POST(req: Request) {
         name,
         description,
         status,
+        role: "admin",
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         budgetType,
@@ -121,11 +122,13 @@ export async function POST(req: Request) {
               userId: session.user.id,
               role: "admin",
             },
-            // Dodaj wybranych użytkowników
-            ...users.map((user: any) => ({
-              userId: user.id,
-              role: "member",
-            })),
+            // Dodaj wybranych użytkowników (pomijając twórcę)
+            ...users
+              .filter((user: any) => user.id !== session.user.id)
+              .map((user: any) => ({
+                userId: user.id,
+                role: "member",
+              })),
           ],
         },
         // Dodawanie zespołów

@@ -6,6 +6,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions)
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = 4 // Stała liczba projektów na stronę
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -24,8 +27,8 @@ export async function GET(req: Request) {
       ]
     }
 
-    const [projects, stats, activity] = await Promise.all([
-      // Pobierz projekty
+    const [projects, totalProjects, stats, activity] = await Promise.all([
+      // Pobierz projekty z paginacją
       prisma.project.findMany({
         where: projectAccessCondition,
         include: {
@@ -59,7 +62,14 @@ export async function GET(req: Request) {
         },
         orderBy: {
           created_at: "desc"
-        }
+        },
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+
+      // Pobierz całkowitą liczbę projektów
+      prisma.project.count({
+        where: projectAccessCondition
       }),
 
       // Pobierz statystyki
@@ -141,6 +151,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       projects,
+      totalProjects,
       stats: {
         activeProjects,
         completedProjects,

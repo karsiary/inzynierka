@@ -148,6 +148,7 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("Form submitted")
     setError(null)
 
     // Walidacja wszystkich pól jednocześnie
@@ -157,6 +158,8 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
       endDate && 
       status &&
       songs.length > 0
+
+    console.log("Form validation:", isFormValid)
 
     // Ustawiamy stany walidacji dla wszystkich pól
     setIsNameInvalid(!name.trim())
@@ -172,23 +175,27 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
 
     try {
       setIsLoading(true)
+      console.log("Sending request to create project")
 
-    const projectData = {
-      name,
-      description,
-      status,
-      startDate: startDate?.toISOString(),
-      endDate: endDate?.toISOString(),
-      budgetType,
-      budgetGlobal: budgetType === "global" ? Number(budgetGlobal) : undefined,
-      budgetPhases:
-        budgetType === "phases"
-          ? [Number(budgetPhase1), Number(budgetPhase2), Number(budgetPhase3), Number(budgetPhase4)]
-          : undefined,
-      teams,
-      users,
-      songs,
-    }
+      const projectData = {
+        name,
+        description,
+        status,
+        role: "admin",
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+        budgetType,
+        budgetGlobal: budgetType === "global" ? Number(budgetGlobal) : undefined,
+        budgetPhases:
+          budgetType === "phases"
+            ? [Number(budgetPhase1), Number(budgetPhase2), Number(budgetPhase3), Number(budgetPhase4)]
+            : undefined,
+        teams,
+        users,
+        songs,
+      }
+
+      console.log("Project data:", projectData)
 
       const response = await fetch("/api/projects", {
         method: "POST",
@@ -198,15 +205,19 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
         body: JSON.stringify(projectData),
       })
 
+      console.log("Response status:", response.status)
+
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.message || "Wystąpił błąd podczas tworzenia projektu")
       }
 
       const project = await response.json()
+      console.log("Project created:", project)
       toast.success("Projekt został utworzony")
       onSuccess()
     } catch (error: any) {
+      console.error("Error in handleSubmit:", error)
       toast.error(error.message)
     } finally {
       setIsLoading(false)
@@ -311,7 +322,7 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full bg-[#403d39] border-none mb-6">
           <TabsTrigger

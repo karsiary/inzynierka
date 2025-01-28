@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Music2 } from "lucide-react"
+import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Music2, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { usePathname, useRouter } from "next/navigation"
@@ -22,6 +22,9 @@ export default function DashboardPage() {
   const [activityData, setActivityData] = useState<any[]>([])
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalProjects, setTotalProjects] = useState(0)
+  const projectsPerPage = 4
 
   const fetchData = useCallback(async () => {
     if (!session?.user?.id) {
@@ -30,7 +33,7 @@ export default function DashboardPage() {
     }
 
     try {
-      const response = await fetch("/api/dashboard")
+      const response = await fetch(`/api/dashboard?page=${currentPage}`)
       if (!response.ok) {
         throw new Error("Błąd podczas pobierania danych")
       }
@@ -39,12 +42,13 @@ export default function DashboardPage() {
       setProjects(data.projects)
       setStats(data.stats)
       setActivityData(data.activity)
+      setTotalProjects(data.totalProjects)
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
     } finally {
       setIsLoading(false)
     }
-  }, [router, session])
+  }, [router, session, currentPage])
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -53,6 +57,20 @@ export default function DashboardPage() {
       router.push("/login")
     }
   }, [status, fetchData])
+
+  const totalPages = Math.ceil(totalProjects / projectsPerPage)
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1)
+    }
+  }
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1)
+    }
+  }
 
   if (status === "loading" || isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
@@ -301,6 +319,35 @@ export default function DashboardPage() {
                 </Link>
               ))}
             </div>
+            
+            {/* Pagination Controls */}
+            {totalProjects > projectsPerPage && (
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-[#ccc5b9]/20">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className="text-[#ccc5b9] hover:text-[#fffcf2] disabled:opacity-50"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Poprzednia
+                </Button>
+                <span className="text-[#ccc5b9]">
+                  Strona {currentPage} z {totalPages}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="text-[#ccc5b9] hover:text-[#fffcf2] disabled:opacity-50"
+                >
+                  Następna
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            )}
           </Card>
           <AddProjectDialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen} onProjectAdded={fetchData} />
         </main>
