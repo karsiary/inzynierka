@@ -38,6 +38,12 @@ export async function GET(
     console.log("SongId parsed:", songId)
 
     try {
+      console.log("Parametry zapytania do bazy:", {
+        project_id: projectId,
+        phase_id: params.phaseId,
+        song_id: songId
+      })
+
       const tasks = await prisma.task.findMany({
         where: {
           project_id: projectId,
@@ -54,14 +60,23 @@ export async function GET(
                 }
               }
             }
-          }
+          },
+          responsible: {
+            select: {
+              id: true,
+              name: true,
+              image: true
+            }
+          },
+          comments: true,
+          checklistItems: true
         },
         orderBy: {
           created_at: 'desc'
         }
       })
 
-      console.log("Znalezione zadania:", tasks.length)
+      console.log("Znalezione zadania w bazie:", tasks)
 
       // Transform the data to match the expected format
       const formattedTasks = tasks.map(task => ({
@@ -69,8 +84,15 @@ export async function GET(
         assignees: task.assignees.map(assignee => ({
           name: assignee.user.name,
           avatar: assignee.user.image
-        }))
+        })),
+        commentsCount: task.comments.length,
+        checklistStats: {
+          total: task.checklistItems.length,
+          completed: task.checklistItems.filter(item => item.isCompleted).length
+        }
       }))
+
+      console.log("Sformatowane zadania:", formattedTasks)
 
       return NextResponse.json(formattedTasks)
     } catch (dbError) {

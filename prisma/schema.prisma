@@ -54,6 +54,7 @@ model User {
   createdTasks  Task[]    @relation("TaskCreator")
   assignedTasks TaskAssignee[]
   responsibleTasks Task[] @relation("TaskResponsible")
+  comments      TaskComment[]
 }
 
 model VerificationToken {
@@ -143,6 +144,27 @@ model SongAuthor {
   updated_at DateTime @updatedAt
 }
 
+model TaskComment {
+  id          Int      @id @default(autoincrement())
+  content     String
+  taskId      Int
+  userId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model TaskChecklistItem {
+  id          Int      @id @default(autoincrement())
+  content     String
+  isCompleted Boolean  @default(false)
+  taskId      Int
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
 model Task {
   id          Int      @id @default(autoincrement())
   title       String
@@ -164,6 +186,8 @@ model Task {
   creator     User     @relation("TaskCreator", fields: [created_by], references: [id])
   responsible User?    @relation("TaskResponsible", fields: [responsible_user], references: [id])
   assignees   TaskAssignee[]
+  comments    TaskComment[]
+  checklistItems TaskChecklistItem[]
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }

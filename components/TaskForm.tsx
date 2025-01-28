@@ -28,6 +28,13 @@ interface Comment {
   text: string
   author: string
   timestamp: string
+  content?: string
+  userId?: string
+  created_at?: string
+  user?: {
+    name: string
+    image: string | null
+  }
 }
 
 interface User {
@@ -57,6 +64,12 @@ interface TaskData {
   actual_budget: number | null
   checklist: ChecklistItem[] | null
   comments: Comment[] | null
+  checklistItems?: {
+    id: number
+    content: string
+    isCompleted: boolean
+    taskId: number
+  }[]
 }
 
 interface TaskFormProps {
@@ -98,9 +111,26 @@ export function TaskForm({
   const [responsibleUserResults, setResponsibleUserResults] = useState<User[]>([])
   const [plannedBudget, setPlannedBudget] = useState(taskToEdit?.planned_budget?.toString() || "")
   const [actualBudget, setActualBudget] = useState(taskToEdit?.actual_budget?.toString() || "")
-  const [checklist, setChecklist] = useState<ChecklistItem[]>(taskToEdit?.checklist || [])
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(
+    taskToEdit?.checklistItems 
+      ? taskToEdit.checklistItems.map((item: any) => ({
+          id: item.id,
+          text: item.content,
+          completed: item.isCompleted
+        }))
+      : []
+  )
   const [newChecklistItem, setNewChecklistItem] = useState("")
-  const [comments, setComments] = useState<Comment[]>(taskToEdit?.comments || [])
+  const [comments, setComments] = useState<Comment[]>(
+    taskToEdit?.comments 
+      ? taskToEdit.comments.map((comment: any) => ({
+          id: comment.id,
+          text: comment.content || comment.text,
+          author: comment.user?.name || "Użytkownik",
+          timestamp: comment.created_at || new Date().toISOString()
+        }))
+      : []
+  )
   const [newComment, setNewComment] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [songId, setSongId] = useState(selectedSong && selectedSong !== "all" ? selectedSong.toString() : "")
@@ -197,13 +227,14 @@ export function TaskForm({
 
   const handleAddComment = () => {
     if (newComment.trim()) {
+      const now = new Date().toISOString()
       setComments([
         ...comments,
         {
           id: Date.now(),
           text: newComment,
-          author: "Aktualny użytkownik", // Replace with actual user data
-          timestamp: new Date().toISOString(),
+          author: "Aktualny użytkownik",
+          timestamp: now
         },
       ])
       setNewComment("")
@@ -666,7 +697,7 @@ export function TaskForm({
                       <div className="flex justify-between items-center">
                         <span className="font-medium text-[#fffcf2]">{comment.author}</span>
                         <span className="text-sm text-[#ccc5b9]">
-                          {format(new Date(comment.timestamp), "PPp", { locale: pl })}
+                          {format(new Date(comment.timestamp), "dd.MM.yyyy HH:mm", { locale: pl })}
                         </span>
                       </div>
                       <p className="text-[#ccc5b9]">{comment.text}</p>

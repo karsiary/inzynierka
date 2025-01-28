@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, MoreHorizontal, Trash2 } from "lucide-react"
+import { Plus, MoreHorizontal, Trash2, Music2, MessageSquare, CheckSquare } from "lucide-react"
 import { AddTaskDialog } from "./add-task-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -28,18 +28,28 @@ interface Task {
   id: number
   title: string
   description: string
-  status: string
+  status: 'todo' | 'inProgress' | 'done'
   priority: string
   assignee: string
   due_date: string
-  songId: string | null
-  projectId: number
-  phaseId: string
+  song_id: number | null
+  project_id: number
+  phase_id: string
   assignees: Array<{ name: string; avatar?: string }>
+  responsible?: {
+    id: string
+    name: string
+    image?: string
+  }
+  commentsCount: number
+  checklistStats: {
+    total: number
+    completed: number
+  }
 }
 
 interface Column {
-  id: string
+  id: 'todo' | 'inProgress' | 'done'
   title: string
   tasks: Task[]
 }
@@ -48,7 +58,6 @@ interface ColumnType {
   todo: Column;
   inProgress: Column;
   done: Column;
-  [key: string]: Column;
 }
 
 interface KanbanBoardProps {
@@ -63,19 +72,19 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
   const [mounted, setMounted] = useState(false)
   const [columns, setColumns] = useState<ColumnType>({
     todo: {
-      id: "todo",
+      id: 'todo',
       title: "Do zrobienia",
-      tasks: [],
+      tasks: [] as Task[],
     },
     inProgress: {
-      id: "inProgress",
+      id: 'inProgress',
       title: "W trakcie",
-      tasks: [],
+      tasks: [] as Task[],
     },
     done: {
-      id: "done",
+      id: 'done',
       title: "Zakończone",
-      tasks: [],
+      tasks: [] as Task[],
     },
   })
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +98,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
 
   useEffect(() => {
     if (mounted) {
+      console.log("Aktualne propsy:", { projectId, phaseId, selectedSong, songs })
       fetchTasks()
     }
   }, [projectId, phaseId, selectedSong, mounted])
@@ -96,6 +106,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
   const fetchTasks = async () => {
     try {
       const url = `/api/projects/${projectId}/phases/${phaseId}/tasks${selectedSong ? `?songId=${selectedSong}` : ''}`
+      console.log("Pobieranie zadań z URL:", url)
       const response = await fetch(url)
       
       if (!response.ok) {
@@ -103,21 +114,22 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
       }
 
       const tasksData = await response.json()
+      console.log("Pobrane zadania:", tasksData)
 
       // Tworzymy nowy obiekt kolumn
-      const newColumns = {
+      const newColumns: ColumnType = {
         todo: {
-          id: "todo",
+          id: 'todo',
           title: "Do zrobienia",
           tasks: [],
         },
         inProgress: {
-          id: "inProgress",
+          id: 'inProgress',
           title: "W trakcie",
           tasks: [],
         },
         done: {
-          id: "done",
+          id: 'done',
           title: "Zakończone",
           tasks: [],
         },
@@ -126,12 +138,14 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
       // Grupujemy zadania po statusie, zapobiegając duplikatom
       const processedTaskIds = new Set()
       tasksData.forEach((task: Task) => {
-        if (!processedTaskIds.has(task.id) && newColumns[task.status]) {
-          newColumns[task.status].tasks.push(task)
+        console.log("Przetwarzanie zadania:", task)
+        if (!processedTaskIds.has(task.id) && task.status in newColumns) {
+          newColumns[task.status as keyof ColumnType].tasks.push(task)
           processedTaskIds.add(task.id)
         }
       })
 
+      console.log("Nowe kolumny:", newColumns)
       setColumns(newColumns)
       setError(null)
       setEditingTask(null)
@@ -154,15 +168,15 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
         return;
     }
 
-    const sourceColumn = columns[source.droppableId];
-    const destColumn = columns[destination.droppableId];
+    const sourceColumn = columns[source.droppableId as keyof ColumnType];
+    const destColumn = columns[destination.droppableId as keyof ColumnType];
     
     // Tworzymy kopie list zadań
     const sourceTasks = Array.from(sourceColumn.tasks);
     const destTasks = Array.from(destColumn.tasks);
     
     // Usuwamy zadanie ze źródłowej kolumny
-    const [movedTask] = sourceTasks.splice(source.index, 1);
+    const [movedTask] = sourceTasks.splice(source.index, 1) as [Task];
     
     // Jeśli przenosimy w tej samej kolumnie
     if (source.droppableId === destination.droppableId) {
@@ -174,7 +188,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                 ...sourceColumn,
                 tasks: sourceTasks,
             },
-        };
+        } as ColumnType;
         
         setColumns(newColumns);
     } else {
@@ -184,9 +198,9 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
             console.log('Task already exists in destination column');
             return;
         }
-        
+
         // Aktualizujemy status zadania
-        const updatedTask = { ...movedTask, status: destination.droppableId };
+        const updatedTask = { ...movedTask, status: destination.droppableId as Task['status'] };
         destTasks.splice(destination.index, 0, updatedTask);
         
         const newColumns = {
@@ -199,7 +213,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                 ...destColumn,
                 tasks: destTasks,
             },
-        };
+        } as ColumnType;
         
         setColumns(newColumns);
         
@@ -224,7 +238,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                 ...columns,
                 [source.droppableId]: sourceColumn,
                 [destination.droppableId]: destColumn,
-            });
+            } as ColumnType);
         }
     }
   };
@@ -294,77 +308,103 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                   className="flex-1 bg-gradient-to-b from-[#252422] to-[#2a2826] rounded-xl p-6 border border-[#eb5e28]/30 shadow-lg shadow-[#eb5e28]/5 transition-all duration-300 hover:shadow-xl hover:shadow-[#eb5e28]/10"
                   style={{ overflowY: 'auto', minHeight: '100px' }}
                 >
-                  {column.tasks.map((task, index) => (
-                    <Draggable 
-                      key={task.id} 
-                      draggableId={task.id ? task.id.toString() : `temp-${index}`} 
-                      index={index}
-                    >
-                      {(provided, snapshot) => (
-                        <Card
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`bg-[#403d39] border-none p-4 cursor-pointer hover:bg-[#403d39]/80 transition-colors mb-4 ${
-                            snapshot.isDragging ? 'shadow-lg ring-2 ring-[#eb5e28]/50' : ''
-                          }`}
-                          onClick={() => setEditingTask(task)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-2">
-                              <h4 className="text-[#fffcf2] font-semibold font-montserrat text-lg">{task.title}</h4>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-xs text-[#ccc5b9] font-open-sans">
-                                  Termin: {new Date(task.due_date).toLocaleDateString()}
-                                </span>
+                  {console.log("Renderowanie zadań dla kolumny:", column.id, column.tasks)}
+                  {column.tasks.map((task: Task, index: number) => {
+                    console.log("Renderowanie zadania:", task);
+                    return (
+                      <Draggable 
+                        key={task.id} 
+                        draggableId={task.id ? task.id.toString() : `temp-${index}`} 
+                        index={index}
+                      >
+                        {(provided, snapshot) => (
+                          <Card
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`bg-[#403d39] border-none p-4 cursor-pointer hover:bg-[#403d39]/90 transition-colors mb-4 ${
+                              snapshot.isDragging ? 'shadow-lg ring-2 ring-[#eb5e28]/50' : ''
+                            }`}
+                            onClick={() => setEditingTask(task)}
+                          >
+                            <div className="flex flex-col space-y-2">
+                              {/* Górny rząd */}
+                              <div className="flex items-center justify-between mb-1">
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs ${
+                                  className={`inline-flex items-center px-2 pt-[0.4rem] pb-1 text-xs font-medium rounded-sm ${
                                     task.priority === "Wysoki"
-                                      ? "bg-red-500/10 text-red-500"
+                                      ? "bg-red-500/20 text-red-500"
                                       : task.priority === "Średni"
-                                        ? "bg-yellow-500/10 text-yellow-500"
-                                        : "bg-green-500/10 text-green-500"
+                                        ? "bg-yellow-500/20 text-yellow-500"
+                                        : "bg-green-500/20 text-green-500"
                                   }`}
                                 >
                                   {task.priority}
                                 </span>
+                                {task.song_id && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Music2 className="w-3.5 h-3.5 text-[#ccc5b9]" />
+                                    <span className="text-xs text-[#ccc5b9] font-medium truncate max-w-[120px]">
+                                      {songs.find(s => s.id === task.song_id)?.title || 'Nieznana'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Tytuł zadania */}
+                              <h4 className="text-[#fffcf2] font-semibold text-sm leading-tight">
+                                {task.title}
+                              </h4>
+
+                              {/* Data */}
+                              <div className="flex items-center">
+                                <span className="text-xs text-[#ccc5b9]">
+                                  {new Date(task.due_date).toLocaleDateString('pl-PL', {
+                                    day: 'numeric',
+                                    month: 'short'
+                                  })}
+                                </span>
+                              </div>
+
+                              {/* Dolny rząd */}
+                              <div className="flex items-center justify-between pt-6
+                              ">
+                                {/* Avatar i osoba odpowiedzialna */}
+                                <div className="flex items-center gap-2">
+                                  {task.responsible && (
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center">
+                                        <span className="text-xs font-medium text-white inline-flex items-center justify-center leading-none">
+                                          {task.responsible.name.slice(0, 2).toUpperCase()}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs text-[#ccc5b9]">
+                                        {task.responsible.name}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Liczniki w prawym dolnym rogu */}
+                                <div className="flex items-center gap-3 ml-auto">
+                                  <div className="flex items-center gap-1">
+                                    <MessageSquare className="w-4 h-4 text-[#ccc5b9]" />
+                                    <span className="text-xs text-[#ccc5b9]">{task.commentsCount || 0}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <CheckSquare className="w-4 h-4 text-[#ccc5b9]" />
+                                    <span className="text-xs text-[#ccc5b9]">
+                                      {task.checklistStats ? `${task.checklistStats.completed}/${task.checklistStats.total}` : '0/0'}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <div className="flex -space-x-2">
-                                {task.assignees?.map((assignee, index) => (
-                                  <Avatar key={index} className="w-6 h-6 border-2 border-[#403d39]">
-                                    <AvatarFallback className="bg-[#eb5e28] text-[#fffcf2] text-xs">
-                                      {assignee.name.slice(0, 2).toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                ))}
-                              </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="text-[#ccc5b9] h-6 w-6">
-                                    <MoreHorizontal className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-56 bg-[#252422] border-[#403d39]">
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      deleteTask(task.id);
-                                    }}
-                                    className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Usuń zadanie</span>
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        </Card>
-                      )}
-                    </Draggable>
-                  ))}
+                          </Card>
+                        )}
+                      </Draggable>
+                    );
+                  })}
                   {provided.placeholder}
                 </div>
               )}
