@@ -597,7 +597,7 @@ function BaseTaskForm({
                     )}>
                       <div className="flex items-center space-x-2">
                         <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
-                          <span className="text-sm font-semibold text-[#fffcf2]">
+                          <span className="text-sm font-semibold text-[#fffcf2] leading-none mt-0.5">
                             {responsibleUserDetails.name.split(" ").map((n: string) => n[0]).join("")}
                           </span>
                         </div>
@@ -639,7 +639,7 @@ function BaseTaskForm({
                                 >
                                   <div className="flex items-center space-x-2">
                                     <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
-                                      <span className="text-sm font-semibold text-[#fffcf2]">
+                                      <span className="text-sm font-semibold text-[#fffcf2] leading-none mt-0.5">
                                         {user.name.split(" ").map((n: string) => n[0]).join("")}
                                       </span>
                                     </div>

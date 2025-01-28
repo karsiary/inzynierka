@@ -374,8 +374,8 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                                   {task.responsible && (
                                     <div className="flex items-center gap-1.5">
                                       <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center">
-                                        <span className="text-xs font-medium text-white inline-flex items-center justify-center leading-none">
-                                          {task.responsible.name.slice(0, 2).toUpperCase()}
+                                        <span className="text-xs font-medium text-white inline-flex items-center justify-center leading-none mt-0.5">
+                                          {task.responsible.name.split(" ").map(n => n[0]).join("").toUpperCase()}
                                         </span>
                                       </div>
                                       <span className="text-xs text-[#ccc5b9]">
