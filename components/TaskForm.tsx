@@ -16,6 +16,7 @@ import { pl } from "date-fns/locale"
 import { CalendarIcon, Plus, Trash2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Song } from "@prisma/client"
+import { useSession } from "next-auth/react"
 
 interface ChecklistItem {
   id: number
@@ -99,6 +100,7 @@ function BaseTaskForm({
   defaultStatus,
   isEditMode
 }: BaseTaskFormProps & { taskToEdit?: TaskData | null; onDelete?: () => void; isEditMode: boolean }) {
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState("details")
   const [title, setTitle] = useState(taskToEdit?.title || "")
   const [description, setDescription] = useState(taskToEdit?.description || "")
@@ -248,14 +250,14 @@ function BaseTaskForm({
   }
 
   const handleAddComment = () => {
-    if (newComment.trim()) {
+    if (newComment.trim() && session?.user) {
       const now = new Date().toISOString()
       setComments([
         ...comments,
         {
           id: Date.now(),
           text: newComment,
-          author: "Aktualny użytkownik",
+          author: session.user.name || "Użytkownik",
           timestamp: now
         },
       ])
@@ -315,6 +317,11 @@ function BaseTaskForm({
 
     console.log("Wysyłane dane zadania:", taskData)
     onSubmit(taskData)
+  }
+
+  const getUserInitials = (name: string | null) => {
+    if (!name) return "u"
+    return name.split(" ").map(n => n[0].toLowerCase()).join("")
   }
 
   return (
@@ -598,7 +605,7 @@ function BaseTaskForm({
                       <div className="flex items-center space-x-2">
                         <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
                           <span className="text-sm font-semibold text-[#fffcf2] leading-none mt-0.5">
-                            {responsibleUserDetails.name.split(" ").map((n: string) => n[0]).join("")}
+                            {getUserInitials(responsibleUserDetails.name)}
                           </span>
                         </div>
                         <div>
@@ -640,7 +647,7 @@ function BaseTaskForm({
                                   <div className="flex items-center space-x-2">
                                     <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
                                       <span className="text-sm font-semibold text-[#fffcf2] leading-none mt-0.5">
-                                        {user.name.split(" ").map((n: string) => n[0]).join("")}
+                                        {getUserInitials(user.name)}
                                       </span>
                                     </div>
                                     <div>
