@@ -41,14 +41,14 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
   const [activeTab, setActiveTab] = useState("details")
   const [name, setName] = useState(initialData?.name || "")
   const [description, setDescription] = useState(initialData?.description || "")
-  const [status, setStatus] = useState(initialData?.status || "active")
+  const [status, setStatus] = useState<string>(initialData?.status || "active")
   const [startDate, setStartDate] = useState<Date | undefined>(
     initialData?.startDate ? new Date(initialData.startDate) : undefined,
   )
   const [endDate, setEndDate] = useState<Date | undefined>(
     initialData?.endDate ? new Date(initialData.endDate) : undefined,
   )
-  const [budgetType, setBudgetType] = useState(initialData?.budgetType || "global")
+  const [budgetType, setBudgetType] = useState<"global" | "phases">("global")
   const [budgetGlobal, setBudgetGlobal] = useState(initialData?.budgetGlobal || "")
   const [budgetPhase1, setBudgetPhase1] = useState(initialData?.budgetPhase1 || "")
   const [budgetPhase2, setBudgetPhase2] = useState(initialData?.budgetPhase2 || "")
@@ -67,6 +67,13 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
   const [isLoading, setIsLoading] = useState(false)
   const [teamSearchResults, setTeamSearchResults] = useState<any[]>([])
   const [userSearchResults, setUserSearchResults] = useState<any[]>([])
+
+  // Dodanie stanów walidacji
+  const [isNameInvalid, setIsNameInvalid] = useState(false)
+  const [isStartDateInvalid, setIsStartDateInvalid] = useState(false)
+  const [isEndDateInvalid, setIsEndDateInvalid] = useState(false)
+  const [isStatusInvalid, setIsStatusInvalid] = useState(false)
+  const [isSongsInvalid, setIsSongsInvalid] = useState(false)
 
   const sampleAuthors = ["Jan Kowalski", "Anna Nowak", "Piotr Wiśniewski", "Maria Kowalczyk", "Tomasz Lewandowski"]
 
@@ -125,8 +132,23 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
     e.preventDefault()
     setError(null)
 
-    if (!name.trim()) {
-      setError("Nazwa projektu jest wymagana")
+    // Walidacja wszystkich pól jednocześnie
+    const isFormValid = 
+      name.trim() && 
+      startDate && 
+      endDate && 
+      status &&
+      songs.length > 0
+
+    // Ustawiamy stany walidacji dla wszystkich pól
+    setIsNameInvalid(!name.trim())
+    setIsStartDateInvalid(!startDate)
+    setIsEndDateInvalid(!endDate)
+    setIsStatusInvalid(!status)
+    setIsSongsInvalid(songs.length === 0)
+
+    if (!isFormValid) {
+      setError("Wypełnij wszystkie wymagane pola")
       return
     }
 
@@ -279,8 +301,10 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
-                  required
+                  className={cn(
+                    "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
+                    isNameInvalid && "border-red-500 focus:border-red-500"
+                  )}
                 />
               </div>
 
@@ -308,6 +332,7 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                         className={cn(
                           "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2]",
                           !startDate && "text-[#ccc5b9]",
+                          isStartDateInvalid && "border-red-500 focus:border-red-500"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -358,6 +383,7 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                         className={cn(
                           "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2]",
                           !endDate && "text-[#ccc5b9]",
+                          isEndDateInvalid && "border-red-500 focus:border-red-500"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -404,7 +430,12 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
                   Status projektu
                 </Label>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="bg-[#403d39] border-[#403d39] text-[#fffcf2]">
+                  <SelectTrigger 
+                    className={cn(
+                      "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
+                      isStatusInvalid && "border-red-500 focus:border-red-500"
+                    )}
+                  >
                     <SelectValue placeholder="Wybierz status" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#252422] border-[#403d39]">
@@ -579,18 +610,21 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
 
             <TabsContent value="songs" className="space-y-6">
               <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="newSongTitle" className="text-[#fffcf2] font-roboto">
-                      Tytuł piosenki
-                    </Label>
-                    <Input
-                      id="newSongTitle"
-                      value={newSongTitle}
-                      onChange={(e) => setNewSongTitle(e.target.value)}
-                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                <div className="space-y-2">
+                  <Label htmlFor="newSongTitle" className="text-[#fffcf2] font-roboto">
+                    Tytuł piosenki
+                  </Label>
+                  <Input
+                    id="newSongTitle"
+                    value={newSongTitle}
+                    onChange={(e) => setNewSongTitle(e.target.value)}
+                    className={cn(
+                      "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
+                      isSongsInvalid && songs.length === 0 && "border-red-500 focus:border-red-500"
+                    )}
                     placeholder="Wprowadź tytuł piosenki"
-                    />
-                  </div>
+                  />
+                </div>
 
                 <div className="space-y-2">
                   <Label className="text-[#fffcf2] font-roboto">Autorzy</Label>
