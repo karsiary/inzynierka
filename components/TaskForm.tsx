@@ -777,7 +777,6 @@ function BaseTaskForm({
         )}
         <Button
           type="submit"
-          onClick={handleSubmit}
           className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
         >
           {taskToEdit ? "Zapisz zmiany" : "Dodaj zadanie"}
