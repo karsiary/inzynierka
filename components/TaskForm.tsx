@@ -141,6 +141,12 @@ function BaseTaskForm({
   const [error, setError] = useState("")
   const [isTitleInvalid, setIsTitleInvalid] = useState(false)
   const [isActivityTypeInvalid, setIsActivityTypeInvalid] = useState(false)
+  const [isSongInvalid, setIsSongInvalid] = useState(false)
+  const [isStatusInvalid, setIsStatusInvalid] = useState(false)
+  const [isStartDateInvalid, setIsStartDateInvalid] = useState(false)
+  const [isEndDateInvalid, setIsEndDateInvalid] = useState(false)
+  const [isResponsibleUserInvalid, setIsResponsibleUserInvalid] = useState(false)
+  const [isPlannedBudgetInvalid, setIsPlannedBudgetInvalid] = useState(false)
   const [songId, setSongId] = useState(
     taskToEdit?.song_id 
       ? taskToEdit.song_id.toString() 
@@ -259,28 +265,34 @@ function BaseTaskForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    let hasErrors = false;
 
-    // Sprawdzanie obu pól jednocześnie
-    if (!title.trim()) {
-      setIsTitleInvalid(true)
-      hasErrors = true
-    } else {
-      setIsTitleInvalid(false)
-    }
+    // Walidacja wszystkich pól jednocześnie
+    const isFormValid = 
+      title.trim() && 
+      activityType && 
+      status && 
+      songId && 
+      startDate && 
+      endDate && 
+      responsibleUser && 
+      (!isEditMode ? (plannedBudget !== "" && !isNaN(parseFloat(plannedBudget))) : true)
 
-    if (!activityType) {
-      setIsActivityTypeInvalid(true)
-      hasErrors = true
-    } else {
-      setIsActivityTypeInvalid(false)
-    }
+    // Ustawiamy stany walidacji dla wszystkich pól
+    setIsTitleInvalid(!title.trim())
+    setIsActivityTypeInvalid(!activityType)
+    setIsStatusInvalid(!status)
+    setIsSongInvalid(!songId)
+    setIsStartDateInvalid(!startDate)
+    setIsEndDateInvalid(!endDate)
+    setIsResponsibleUserInvalid(!responsibleUser)
+    setIsPlannedBudgetInvalid(!isEditMode && (plannedBudget === "" || isNaN(parseFloat(plannedBudget))))
 
-    if (hasErrors) {
+    if (!isFormValid) {
       return;
     }
 
     const taskData: TaskData = {
+      ...(taskToEdit?.id ? { id: taskToEdit.id } : {}), // Dodajemy id tylko jeśli edytujemy zadanie
       title: title.trim(),
       description: description.trim() || null,
       status,
@@ -291,7 +303,7 @@ function BaseTaskForm({
       phase_id: phaseId,
       project_id: parseInt(projectId),
       song_id: songId ? parseInt(songId) : null,
-      created_by: "", // To będzie ustawione przez backend
+      created_by: taskToEdit?.created_by || "", // Zachowujemy oryginalnego twórcę przy edycji
       activityType: activityType || null,
       responsible_user: responsibleUser || null,
       planned_budget: plannedBudget ? parseFloat(plannedBudget) : null,
@@ -340,18 +352,11 @@ function BaseTaskForm({
                   <Input
                     id="title"
                     value={title}
-                    onChange={(e) => {
-                      setTitle(e.target.value)
-                      if (e.target.value.trim()) {
-                        setIsTitleInvalid(false)
-                        setError("")
-                      }
-                    }}
+                    onChange={(e) => setTitle(e.target.value)}
                     className={cn(
                       "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
                       isTitleInvalid && "border-red-500 focus:border-red-500"
                     )}
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -360,11 +365,7 @@ function BaseTaskForm({
                   </Label>
                   <Select 
                     value={activityType} 
-                    onValueChange={(value) => {
-                      setActivityType(value)
-                      setIsActivityTypeInvalid(false)
-                      setError("")
-                    }}
+                    onValueChange={(value) => setActivityType(value)}
                   >
                     <SelectTrigger 
                       id="activityType" 
@@ -401,8 +402,13 @@ function BaseTaskForm({
                   <Label htmlFor="status" className="text-[#fffcf2] font-roboto">
                     Status
                   </Label>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger className="bg-[#403d39] border-[#403d39] text-[#fffcf2]">
+                  <Select value={status} onValueChange={(value) => setStatus(value)}>
+                    <SelectTrigger 
+                      className={cn(
+                        "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
+                        isStatusInvalid && "border-red-500 focus:border-red-500"
+                      )}
+                    >
                       <SelectValue placeholder="Wybierz status">
                         {status === "todo" && "Do zrobienia"}
                         {status === "inProgress" && "W trakcie"}
@@ -427,8 +433,16 @@ function BaseTaskForm({
                   <Label htmlFor="songId" className="text-[#fffcf2] font-roboto">
                     Piosenka
                   </Label>
-                  <Select value={songId} onValueChange={setSongId}>
-                    <SelectTrigger className="bg-[#403d39] border-[#403d39] text-[#fffcf2]">
+                  <Select 
+                    value={songId} 
+                    onValueChange={(value) => setSongId(value)}
+                  >
+                    <SelectTrigger 
+                      className={cn(
+                        "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
+                        isSongInvalid && "border-red-500 focus:border-red-500"
+                      )}
+                    >
                       <SelectValue placeholder="Wybierz piosenkę">
                         {songs.find(song => song.id.toString() === songId)?.title}
                       </SelectValue>
@@ -453,7 +467,8 @@ function BaseTaskForm({
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2] hover:bg-[#403d39]/80",
-                          !startDate && "text-muted-foreground"
+                          !startDate && "text-muted-foreground",
+                          isStartDateInvalid && "border-red-500 focus:border-red-500"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -464,7 +479,7 @@ function BaseTaskForm({
                       <Calendar
                         mode="single"
                         selected={startDate}
-                        onSelect={setStartDate}
+                        onSelect={(date) => setStartDate(date)}
                         initialFocus
                         className="bg-[#252422] text-[#fffcf2]"
                         classNames={{
@@ -504,7 +519,8 @@ function BaseTaskForm({
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2] hover:bg-[#403d39]/80",
-                          !endDate && "text-muted-foreground"
+                          !endDate && "text-muted-foreground",
+                          isEndDateInvalid && "border-red-500 focus:border-red-500"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -515,7 +531,7 @@ function BaseTaskForm({
                       <Calendar
                         mode="single"
                         selected={endDate}
-                        onSelect={setEndDate}
+                        onSelect={(date) => setEndDate(date)}
                         initialFocus
                         className="bg-[#252422] text-[#fffcf2]"
                         classNames={{
@@ -575,7 +591,10 @@ function BaseTaskForm({
                     Osoba odpowiedzialna
                   </Label>
                   {responsibleUserDetails ? (
-                    <div className="flex items-center justify-between p-2 bg-[#403d39] rounded-md">
+                    <div className={cn(
+                      "flex items-center justify-between p-2 bg-[#403d39] rounded-md",
+                      isResponsibleUserInvalid && "border border-red-500"
+                    )}>
                       <div className="flex items-center space-x-2">
                         <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
                           <span className="text-sm font-semibold text-[#fffcf2]">
@@ -603,7 +622,10 @@ function BaseTaskForm({
                         value={searchResponsibleUser}
                         onChange={(e) => setSearchResponsibleUser(e.target.value)}
                         placeholder="Wyszukaj osobę..."
-                        className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                        className={cn(
+                          "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
+                          isResponsibleUserInvalid && "border-red-500 focus:border-red-500"
+                        )}
                       />
                       {responsibleUserResults.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-[#252422] border border-[#403d39] rounded-md shadow-lg">
@@ -659,7 +681,12 @@ function BaseTaskForm({
                       type="number"
                       value={plannedBudget}
                       onChange={(e) => setPlannedBudget(e.target.value)}
-                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2] pl-12"
+                      disabled={isEditMode}
+                      className={cn(
+                        "bg-[#403d39] border-[#403d39] text-[#fffcf2] pl-12",
+                        isPlannedBudgetInvalid && "border-red-500 focus:border-red-500",
+                        isEditMode && "opacity-50 cursor-not-allowed"
+                      )}
                     />
                   </div>
                 </div>
