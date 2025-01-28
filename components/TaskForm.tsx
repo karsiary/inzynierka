@@ -257,22 +257,26 @@ function BaseTaskForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    let hasErrors = false;
 
+    // Sprawdzanie obu pól jednocześnie
     if (!title.trim()) {
-      setError("Tytuł zadania jest wymagany")
       setIsTitleInvalid(true)
-      return
+      hasErrors = true
+    } else {
+      setIsTitleInvalid(false)
     }
 
     if (!activityType) {
-      setError("Rodzaj czynności jest wymagany")
       setIsActivityTypeInvalid(true)
-      return
+      hasErrors = true
+    } else {
+      setIsActivityTypeInvalid(false)
     }
 
-    setIsTitleInvalid(false)
-    setIsActivityTypeInvalid(false)
-    setError("")
+    if (hasErrors) {
+      return;
+    }
 
     const taskData: TaskData = {
       title: title.trim(),
