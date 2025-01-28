@@ -39,6 +39,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       responsible_user: data.responsible_user,
       planned_budget: data.planned_budget,
       actual_budget: data.actual_budget,
+      activityType: data.activityType,
     }
 
     // Aktualizacja zadania

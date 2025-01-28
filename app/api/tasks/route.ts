@@ -38,7 +38,8 @@ export async function POST(req: Request) {
       end_date: data.end_date ? new Date(data.end_date) : null,
       due_date: data.due_date ? new Date(data.due_date) : null,
       created_by: String(session.user.id),
-      responsible_user: data.responsible_user ? String(data.responsible_user) : null
+      responsible_user: data.responsible_user ? String(data.responsible_user) : null,
+      activityType: data.activityType || null,
     }
 
     if (data.planned_budget) {

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { TaskForm } from "@/components/TaskForm"
+import { NewTaskForm, EditTaskForm } from "@/components/TaskForm"
 import type { Song } from "@prisma/client"
 
 interface AddTaskDialogProps {
@@ -122,16 +122,26 @@ export function AddTaskDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <TaskForm
-          taskToEdit={taskToEdit}
-          onSubmit={handleSubmit}
-          onDelete={taskToEdit ? handleDelete : undefined}
-          selectedSong={selectedSong}
-          songs={songs}
-          projectId={projectId}
-          phaseId={phaseId}
-          defaultStatus={currentColumn}
-        />
+        {taskToEdit ? (
+          <EditTaskForm
+            taskToEdit={taskToEdit}
+            onSubmit={handleSubmit}
+            onDelete={handleDelete}
+            selectedSong={selectedSong}
+            songs={songs}
+            projectId={projectId}
+            phaseId={phaseId}
+          />
+        ) : (
+          <NewTaskForm
+            onSubmit={handleSubmit}
+            selectedSong={selectedSong}
+            songs={songs}
+            projectId={projectId}
+            phaseId={phaseId}
+            defaultStatus={currentColumn}
+          />
+        )}
 
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
       </DialogContent>

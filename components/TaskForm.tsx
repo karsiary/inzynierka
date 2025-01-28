@@ -72,10 +72,8 @@ interface TaskData {
   }[]
 }
 
-interface TaskFormProps {
-  taskToEdit?: TaskData | null
+interface BaseTaskFormProps {
   onSubmit: (taskData: TaskData) => void
-  onDelete?: () => void
   selectedSong: string | null
   songs: Song[]
   projectId: string
@@ -83,7 +81,14 @@ interface TaskFormProps {
   defaultStatus?: string
 }
 
-export function TaskForm({ 
+interface NewTaskFormProps extends BaseTaskFormProps {}
+
+interface EditTaskFormProps extends BaseTaskFormProps {
+  taskToEdit: TaskData
+  onDelete: () => void
+}
+
+function BaseTaskForm({
   taskToEdit, 
   onSubmit, 
   onDelete, 
@@ -91,8 +96,9 @@ export function TaskForm({
   songs = [],
   projectId,
   phaseId,
-  defaultStatus
-}: TaskFormProps) {
+  defaultStatus,
+  isEditMode
+}: BaseTaskFormProps & { taskToEdit?: TaskData | null; onDelete?: () => void; isEditMode: boolean }) {
   const [activeTab, setActiveTab] = useState("details")
   const [title, setTitle] = useState(taskToEdit?.title || "")
   const [description, setDescription] = useState(taskToEdit?.description || "")
@@ -132,9 +138,17 @@ export function TaskForm({
       : []
   )
   const [newComment, setNewComment] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState("")
+  const [isTitleInvalid, setIsTitleInvalid] = useState(false)
+  const [isActivityTypeInvalid, setIsActivityTypeInvalid] = useState(false)
   const [songId, setSongId] = useState(selectedSong && selectedSong !== "all" ? selectedSong.toString() : "")
   const [activityType, setActivityType] = useState(taskToEdit?.activityType || "")
+
+  useEffect(() => {
+    if (taskToEdit?.activityType) {
+      setActivityType(taskToEdit.activityType)
+    }
+  }, [taskToEdit])
 
   useEffect(() => {
     console.log("TaskForm - useEffect dla selectedSong:", selectedSong);
@@ -246,8 +260,19 @@ export function TaskForm({
 
     if (!title.trim()) {
       setError("Tytuł zadania jest wymagany")
+      setIsTitleInvalid(true)
       return
     }
+
+    if (!activityType) {
+      setError("Rodzaj czynności jest wymagany")
+      setIsActivityTypeInvalid(true)
+      return
+    }
+
+    setIsTitleInvalid(false)
+    setIsActivityTypeInvalid(false)
+    setError("")
 
     const taskData: TaskData = {
       title: title.trim(),
@@ -309,8 +334,17 @@ export function TaskForm({
                   <Input
                     id="title"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                    onChange={(e) => {
+                      setTitle(e.target.value)
+                      if (e.target.value.trim()) {
+                        setIsTitleInvalid(false)
+                        setError("")
+                      }
+                    }}
+                    className={cn(
+                      "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
+                      isTitleInvalid && "border-red-500 focus:border-red-500"
+                    )}
                     required
                   />
                 </div>
@@ -318,8 +352,21 @@ export function TaskForm({
                   <Label htmlFor="activityType" className="text-[#fffcf2] font-roboto">
                     Rodzaj czynności
                   </Label>
-                  <Select value={activityType} onValueChange={setActivityType}>
-                    <SelectTrigger id="activityType" className="bg-[#403d39] border-[#403d39] text-[#fffcf2]">
+                  <Select 
+                    value={activityType} 
+                    onValueChange={(value) => {
+                      setActivityType(value)
+                      setIsActivityTypeInvalid(false)
+                      setError("")
+                    }}
+                  >
+                    <SelectTrigger 
+                      id="activityType" 
+                      className={cn(
+                        "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
+                        isActivityTypeInvalid && "border-red-500 focus:border-red-500"
+                      )}
+                    >
                       <SelectValue placeholder="Wybierz rodzaj czynności" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#252422] border-[#403d39]">
@@ -733,6 +780,38 @@ export function TaskForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+export function NewTaskForm(props: NewTaskFormProps) {
+  return (
+    <BaseTaskForm
+      {...props}
+      taskToEdit={null}
+      onDelete={undefined}
+      isEditMode={false}
+    />
+  )
+}
+
+export function EditTaskForm({ taskToEdit, onDelete, ...props }: EditTaskFormProps) {
+  return (
+    <BaseTaskForm
+      {...props}
+      taskToEdit={taskToEdit}
+      onDelete={onDelete}
+      isEditMode={true}
+    />
+  )
+}
+
+// Eksportujemy również bazowy komponent dla wstecznej kompatybilności
+export function TaskForm(props: BaseTaskFormProps & { taskToEdit?: TaskData | null; onDelete?: () => void }) {
+  return (
+    <BaseTaskForm
+      {...props}
+      isEditMode={!!props.taskToEdit}
+    />
   )
 }
 
