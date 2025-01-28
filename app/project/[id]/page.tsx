@@ -15,7 +15,7 @@ import { AddTaskDialog } from "./add-task-dialog"
 import { SongSelector } from "./song-selector"
 import type { Project, Song } from "@prisma/client"
 import { useParams } from "next/navigation"
-import { NotificationsPopover } from "@/components/NotificationsPopover"
+import { useSession } from "next-auth/react"
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { Header } from "@/components/Header"
+import { NotificationsPopover } from "@/components/NotificationsPopover"
 
 const noSelectClass = "select-none"
 
@@ -36,6 +38,7 @@ const sampleSongs: Song[] = [
 ]
 
 export default function ProjectPage() {
+  const { data: session, status } = useSession()
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false)
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,6 +51,11 @@ export default function ProjectPage() {
   const [completedSongs, setCompletedSongs] = useState<Record<string, boolean>>({})
   const params = useParams()
   const projectId = params.id as string
+
+  const userInitials = session?.user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("") || "U"
 
   useEffect(() => {
     fetchProject()
@@ -133,19 +141,17 @@ export default function ProjectPage() {
         <nav className="border-b border-[#403d39] bg-[#252422]/80 backdrop-blur-sm sticky top-0 z-50">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/projects"
-                  className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors flex items-center"
-                >
-                  <ChevronLeft className="w-5 h-5 mr-2" />
-                  Powrót do projektów
-                </Link>
-              </div>
+              <Link
+                href="/projects"
+                className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors flex items-center"
+              >
+                <ChevronLeft className="w-5 h-5 mr-2" />
+                Powrót do projektów
+              </Link>
               <div className="flex items-center gap-4">
                 <NotificationsPopover />
                 <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center">
-                  <span className="text-[#fffcf2] font-semibold font-montserrat">JK</span>
+                  <span className="text-[#fffcf2] font-semibold font-montserrat">{userInitials}</span>
                 </div>
               </div>
             </div>
