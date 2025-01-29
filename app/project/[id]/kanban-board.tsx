@@ -322,7 +322,13 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`bg-[#403d39] border-none p-4 cursor-pointer hover:bg-[#403d39]/90 transition-colors mb-4 ${
+                            className={`bg-[#403d39] border-none p-4 cursor-move hover:bg-[#403d39]/90 transition-colors mb-4 
+                              select-none
+                              -webkit-user-select: none
+                              -moz-user-select: none
+                              -ms-user-select: none
+                              ${
+  
                               snapshot.isDragging ? 'shadow-lg ring-2 ring-[#eb5e28]/50' : ''
                             }`}
                             onClick={() => setEditingTask(task)}
@@ -427,12 +433,27 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
         songs={songs}
       />
       <style jsx>{`
+        /* Prevent text selection during drag */
+        [data-rbd-draggable-context-id] {
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          -webkit-tap-highlight-color: transparent;
+        }
+
         .scrollbar-hide {
           scrollbar-width: none;
           -ms-overflow-style: none;
         }
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
+        }
+        
+        /* Apply no-select to all draggable content */
+        [data-rbd-drag-handle-draggable-id] * {
+          pointer-events: none;
+          user-select: none !important;
         }
       `}</style>
     </DragDropContext>
