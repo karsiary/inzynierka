@@ -31,7 +31,10 @@ interface Task {
   status: 'todo' | 'inProgress' | 'done'
   priority: string
   assignee: string
+  start_date: string | null
+  end_date: string | null
   due_date: string
+ | null
   song_id: number | null
   project_id: number
   phase_id: string
@@ -200,7 +203,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
         }
 
         // Aktualizujemy status zadania
-        const updatedTask = { ...movedTask, status: destination.droppableId as Task['status'] };
+        const updatedTask = { ...movedTask, status: destination.droppableId };
         destTasks.splice(destination.index, 0, updatedTask);
         
         const newColumns = {
@@ -223,7 +226,14 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ status: destination.droppableId }),
+                body: JSON.stringify({
+                    ...movedTask,
+                    status: destination.droppableId,
+                    // Ensure we send all task data including dates
+                    start_date: movedTask.start_date,
+                    due_date: movedTask.due_date,
+                    end_date: movedTask.end_date
+                }),
             });
 
             if (!response.ok) {
@@ -365,10 +375,8 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                               {/* Data */}
                               <div className="flex items-center">
                                 <span className="text-xs text-[#ccc5b9]">
-                                  {new Date(task.due_date).toLocaleDateString('pl-PL', {
-                                    day: 'numeric',
-                                    month: 'short'
-                                  })}
+                                  {task.due_date ? new Date(task.due_date).toLocaleDateString('pl-PL', {
+ day: 'numeric', month: 'short' }) : ''}
                                 </span>
                               </div>
 

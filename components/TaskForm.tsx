@@ -53,7 +53,7 @@ interface TaskData {
   priority: string
   start_date?: string | null
   end_date?: string | null
-  due_date: Date | null
+  due_date: string | null
   phase_id: string
   project_id: number
   song_id: number | null
@@ -300,8 +300,8 @@ function BaseTaskForm({
       status,
       priority,
       start_date: startDate ? startDate.toISOString() : null,
+      due_date: endDate ? endDate.toISOString() : null,
       end_date: endDate ? endDate.toISOString() : null,
-      due_date: endDate || null,
       phase_id: phaseId,
       project_id: parseInt(projectId),
       song_id: songId ? parseInt(songId) : null,
