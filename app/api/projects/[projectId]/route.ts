@@ -155,64 +155,65 @@ export async function DELETE(
       )
     }
 
-    // Usuń wszystkie powiązane dane w odpowiedniej kolejności
-    await prisma.$transaction(async (prisma) => {
-      // 1. Usuń wszystkie zadania projektu i ich powiązane dane
+    try {
+      // 1. Usuń komentarze i checklisty dla wszystkich zadań
       const tasks = await prisma.task.findMany({
-        where: { project_id: projectId },
-        select: { id: true }
+        where: { project_id: projectId }
       })
-      
+
       for (const task of tasks) {
-        // Usuń komentarze zadania
         await prisma.comment.deleteMany({
           where: { task_id: task.id }
         })
-        
-        // Usuń elementy checklisty zadania
         await prisma.checklistItem.deleteMany({
           where: { task_id: task.id }
         })
       }
-      
-      // Usuń wszystkie zadania projektu
+
+      // 2. Usuń wszystkie zadania
       await prisma.task.deleteMany({
         where: { project_id: projectId }
       })
 
-      // 2. Usuń powiązania z zespołami
-      await prisma.projectTeam.deleteMany({
-        where: { projectId }
-      })
-
-      // 3. Usuń członków projektu
-      await prisma.projectMember.deleteMany({
-        where: { projectId }
-      })
-
-      // 4. Usuń autorów piosenek
+      // 3. Usuń autorów piosenek
       for (const song of project.songs) {
         await prisma.songAuthor.deleteMany({
           where: { songId: song.id }
         })
       }
 
-      // 5. Usuń piosenki
+      // 4. Usuń piosenki
       await prisma.song.deleteMany({
         where: { projectId }
       })
 
-      // 6. Na końcu usuń sam projekt
+      // 5. Usuń powiązania z zespołami
+      await prisma.projectTeam.deleteMany({
+        where: { projectId }
+      })
+
+      // 6. Usuń członków projektu
+      await prisma.projectMember.deleteMany({
+        where: { projectId }
+      })
+
+      // 7. Na końcu usuń sam projekt
       await prisma.project.delete({
         where: { id: projectId }
       })
-    })
 
-    return NextResponse.json({ success: true })
+      return NextResponse.json({ success: true })
+    } catch (error) {
+      console.error("Szczegóły błędu podczas usuwania:", error)
+      return NextResponse.json(
+        { error: "Wystąpił błąd podczas usuwania projektu" },
+        { status: 500 }
+      )
+    }
   } catch (error) {
-    console.error("Error deleting project:", error)
+    console.error("Błąd główny:", error)
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Wystąpił nieoczekiwany błąd" },
       { status: 500 }
     )
   }
