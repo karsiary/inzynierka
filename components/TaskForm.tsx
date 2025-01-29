@@ -409,12 +409,11 @@ function BaseTaskForm({
                   <Label htmlFor="status" className="text-[#fffcf2] font-roboto">
                     Status
                   </Label>
-                  <Select value={status} onValueChange={(value) => setStatus(value)} disabled={!isEditMode}>
+                  <Select value={status} onValueChange={(value) => setStatus(value)} disabled>
                     <SelectTrigger 
                       className={cn(
-                        "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
-                        isStatusInvalid && "border-red-500 focus:border-red-500",
-                        !isEditMode && "opacity-50 cursor-not-allowed"
+                        "bg-[#403d39] border-[#403d39] text-[#fffcf2] opacity-50 cursor-not-allowed",
+                        isStatusInvalid && "border-red-500 focus:border-red-500"
                       )}
                     >
                       <SelectValue placeholder="Wybierz status">
