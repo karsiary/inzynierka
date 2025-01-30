@@ -274,33 +274,35 @@ export default function DashboardPage() {
                       <p className="text-sm text-[#ccc5b9] font-open-sans">{project.progress === 100 ? "Zakończony" : "W trakcie"}</p>
                       <p className="text-sm text-[#eb5e28] font-open-sans font-medium">{Math.round(project.progress)}%</p>
                     </div>
-                    <div className="w-full bg-[#252422] rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-[#403d39] rounded-full h-1.5 overflow-hidden">
                       <div
                         className="h-full bg-[#eb5e28] rounded-full transition-all duration-300 ease-in-out"
                         style={{ width: `${Math.round(project.progress)}%` }}
                       />
                     </div>
                   </div>
-                  {project.userId === session?.user?.id && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-[#ccc5b9] hover:text-[#fffcf2]">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="bg-[#252422] border-[#403d39]">
-                        <DropdownMenuItem 
-                          className="text-red-500 focus:text-red-500 focus:bg-[#403d39]"
-                          onClick={() => {
-                            setProjectToDelete(project.id)
-                            setIsDeleteDialogOpen(true)
-                          }}
-                        >
-                          Usuń projekt
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                  <div className="w-8">
+                    {project.userId === session?.user?.id && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-[#ccc5b9] hover:text-[#fffcf2]">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#252422] border-[#403d39]">
+                          <DropdownMenuItem 
+                            className="text-red-500 focus:text-red-500 focus:bg-[#403d39]"
+                            onClick={() => {
+                              setProjectToDelete(project.id)
+                              setIsDeleteDialogOpen(true)
+                            }}
+                          >
+                            Usuń projekt
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

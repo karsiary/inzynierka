@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { X, Plus, Search } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 interface User {
   id: string
@@ -51,6 +52,9 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
   const [editedTeam, setEditedTeam] = useState<Team | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<User[]>([])
+  const [isLeaving, setIsLeaving] = useState(false)
+  const [leaveError, setLeaveError] = useState<string | null>(null)
+  const router = useRouter()
 
   // Sprawdź, czy zalogowany użytkownik jest administratorem zespołu
   const isAdmin = editedTeam?.members.some(
@@ -128,6 +132,40 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
   const getUserInitials = (name: string | null) => {
     if (!name) return "U"
     return name.split(" ").map(n => n[0]).join("")
+  }
+
+  const handleLeaveTeam = async () => {
+    if (!editedTeam) return
+
+    try {
+      setIsLeaving(true)
+      setLeaveError(null)
+
+      const response = await fetch(`/api/teams/${editedTeam.id}/leave`, {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Wystąpił błąd podczas opuszczania zespołu")
+      }
+
+      const result = await response.json()
+      
+      onOpenChange(false)
+      
+      // Jeśli zespół został usunięty, przekieruj na stronę zespołów
+      if (result.teamDeleted) {
+        router.push('/team')
+      }
+      
+      router.refresh()
+    } catch (error) {
+      console.error("Error leaving team:", error)
+      setLeaveError(error instanceof Error ? error.message : "Wystąpił błąd podczas opuszczania zespołu")
+    } finally {
+      setIsLeaving(false)
+    }
   }
 
   return (
@@ -266,16 +304,45 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-2 hover:bg-[#403d39] hover:text-[#fffcf2] text-[#8a8580]"
-          >
-            Anuluj
-          </Button>
-          <Button onClick={handleSave} className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
-            Zapisz zmiany
-          </Button>
+          {leaveError && (
+            <p className="text-red-500 text-sm mb-2 w-full text-center">
+              {leaveError}
+            </p>
+          )}
+          <div className="flex justify-between w-full">
+            <Button
+              variant="outline"
+              onClick={handleLeaveTeam}
+              disabled={isLeaving}
+              className="border-2 border-[#eb5e28] text-[#eb5e28] hover:bg-[#eb5e28]/10 hover:text-[#eb5e28] transition-colors"
+            >
+              {isLeaving ? (
+                <>
+                  <span className="mr-2">Opuszczanie</span>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </>
+              ) : (
+                "Opuść zespół"
+              )}
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="border-2 hover:bg-[#403d39] hover:text-[#fffcf2] text-[#8a8580]"
+              >
+                Anuluj
+              </Button>
+              {isAdmin && (
+                <Button onClick={handleSave} className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
+                  Zapisz zmiany
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
