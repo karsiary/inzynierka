@@ -340,10 +340,15 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <p className="text-sm text-[#ccc5b9] font-open-sans">{project.status}</p>
-                        <p className="text-sm text-[#eb5e28] font-open-sans">{project.progress}%</p>
-                      </div>
-                      <div className="w-24 h-2 bg-[#403d39] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#eb5e28] rounded-full" style={{ width: `${project.progress}%` }} />
+                        <div className="flex items-center gap-2">
+                          <div className="w-full bg-[#252422] rounded-full h-2">
+                            <div
+                              className="h-full bg-[#eb5e28] rounded-full"
+                              style={{ width: `${Math.round(project.progress)}%` }}
+                            />
+                          </div>
+                          <p className="text-sm text-[#eb5e28] font-open-sans">{Math.round(project.progress)}%</p>
+                        </div>
                       </div>
                       {project.userId === session?.user?.id && (
                         <DropdownMenu>

@@ -12,8 +12,8 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         <div>
           <h1 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">{project.name}</h1>
           <div className="flex items-center space-x-4">
-            <Progress value={project.progress} className="w-48 bg-[#403d39]" />
-            <span className="text-[#ccc5b9] text-sm font-open-sans">{project.progress}% ukończono</span>
+            <Progress value={Math.round(project.progress)} className="w-48 bg-[#403d39]" />
+            <span className="text-[#ccc5b9] text-sm font-open-sans">{Math.round(project.progress)}% ukończono</span>
           </div>
         </div>
       </div>

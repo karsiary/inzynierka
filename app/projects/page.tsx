@@ -250,13 +250,13 @@ export default function ProjectsPage() {
                           <span className="text-sm text-[#ccc5b9]">{project.status}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-[#252422] rounded-full overflow-hidden">
+                          <div className="w-full bg-[#252422] rounded-full h-2">
                             <div
                               className="h-full bg-[#eb5e28] rounded-full"
-                              style={{ width: `${project.progress}%` }}
+                              style={{ width: `${Math.round(project.progress)}%` }}
                             />
                           </div>
-                          <span className="text-sm text-[#eb5e28]">{project.progress}%</span>
+                          <span className="text-sm text-[#eb5e28]">{Math.round(project.progress)}%</span>
                         </div>
                       </div>
 

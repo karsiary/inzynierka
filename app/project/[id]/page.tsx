@@ -278,7 +278,9 @@ export default function ProjectPage() {
                       className={`bg-[#eb5e28] hover:bg-[#eb5e28]/90 text-white ${noSelectClass}`}
                     >
                       {viewPhase === (songPhases[selectedSong] || "1")
-                        ? "Następna faza utworu"
+                        ? songPhases[selectedSong] === "4"
+                          ? "Zakończ utwór"
+                          : "Następna faza utworu"
                         : "Pokaż aktualną fazę utworu"}
                     </Button>
                   )}

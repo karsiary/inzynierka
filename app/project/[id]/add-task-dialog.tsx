@@ -128,7 +128,7 @@ export function AddTaskDialog({
             onSubmit={handleSubmit}
             onDelete={handleDelete}
             selectedSong={selectedSong}
-            songs={songs}
+            songs={songs.filter(song => song.status !== 'completed')}
             projectId={projectId}
             phaseId={phaseId}
           />
@@ -136,7 +136,7 @@ export function AddTaskDialog({
           <NewTaskForm
             onSubmit={handleSubmit}
             selectedSong={selectedSong}
-            songs={songs}
+            songs={songs.filter(song => song.status !== 'completed')}
             projectId={projectId}
             phaseId={phaseId}
             defaultStatus={currentColumn}
@@ -148,4 +148,3 @@ export function AddTaskDialog({
     </Dialog>
   )
 }
-

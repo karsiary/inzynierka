@@ -310,7 +310,10 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
               )}
             </div>
 
-            <Droppable droppableId={column.id}>
+            <Droppable
+              droppableId={column.id}
+              isDropDisabled={isSongCompleted}
+            >
               {(provided) => (
                 <div
                   {...provided.droppableProps}
@@ -322,10 +325,11 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                   {column.tasks.map((task: Task, index: number) => {
                     console.log("Renderowanie zadania:", task);
                     return (
-                      <Draggable 
-                        key={task.id} 
-                        draggableId={task.id ? task.id.toString() : `temp-${index}`} 
+                      <Draggable
+                        key={task.id}
+                        draggableId={task.id.toString()}
                         index={index}
+                        isDragDisabled={isSongCompleted}
                       >
                         {(provided, snapshot) => (
                           <Card
