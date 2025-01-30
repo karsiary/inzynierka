@@ -99,6 +99,7 @@ model ProjectMember {
   projectId Int
   userId    String
   role      String   @default("member")
+  userRoles String?  // Przechowywane jako JSON string
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   created_at DateTime @default(now())

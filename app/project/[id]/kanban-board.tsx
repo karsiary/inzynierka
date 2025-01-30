@@ -307,7 +307,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, completedSongs, 
           <div key={column.id} className="flex flex-col h-[calc(100vh-400px)]">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">{column.title}</h3>
-              {selectedSong === "all" || !completedSongs[selectedSong] && (
+              {(selectedSong === "all" || !completedSongs[selectedSong]) && (
                 <Button variant="ghost" size="icon" className="text-[#ccc5b9]" onClick={() => handleAddTask(column.id)}>
                   <Plus className="w-4 h-4" />
                 </Button>

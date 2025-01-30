@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { pl } from "date-fns/locale"
-import { CalendarIcon, Plus, Trash2, X } from "lucide-react"
+import { CalendarIcon, Plus, Trash2, X, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Song } from "@prisma/client"
 import { useSession } from "next-auth/react"
@@ -109,6 +109,9 @@ function BaseTaskForm({
   )
   const [endDate, setEndDate] = useState<Date | undefined>(
     taskToEdit?.end_date ? new Date(taskToEdit.end_date) : undefined,
+  )
+  const [endTime, setEndTime] = useState(
+    taskToEdit?.end_date ? format(new Date(taskToEdit.end_date), "HH:mm") : ""
   )
   const [status, setStatus] = useState(taskToEdit?.status || defaultStatus || "todo")
   const [priority, setPriority] = useState(taskToEdit?.priority || "Średni")
@@ -276,6 +279,7 @@ function BaseTaskForm({
       songId && 
       startDate && 
       endDate && 
+      endTime && 
       responsibleUser && 
       (!isEditMode ? (plannedBudget !== "" && !isNaN(parseFloat(plannedBudget))) : true)
 
@@ -285,7 +289,7 @@ function BaseTaskForm({
     setIsStatusInvalid(!status)
     setIsSongInvalid(!songId)
     setIsStartDateInvalid(!startDate)
-    setIsEndDateInvalid(!endDate)
+    setIsEndDateInvalid(!endDate || !endTime)
     setIsResponsibleUserInvalid(!responsibleUser)
     setIsPlannedBudgetInvalid(!isEditMode && (plannedBudget === "" || isNaN(parseFloat(plannedBudget))))
 
@@ -293,19 +297,28 @@ function BaseTaskForm({
       return;
     }
 
+    // Łączymy datę z godziną
+    const endDateTime = endDate ? new Date(
+      endDate.getFullYear(),
+      endDate.getMonth(),
+      endDate.getDate(),
+      parseInt(endTime.split(':')[0]),
+      parseInt(endTime.split(':')[1])
+    ) : undefined;
+
     const taskData: TaskData = {
-      ...(taskToEdit?.id ? { id: taskToEdit.id } : {}), // Dodajemy id tylko jeśli edytujemy zadanie
+      ...(taskToEdit?.id ? { id: taskToEdit.id } : {}),
       title: title.trim(),
       description: description.trim() || null,
       status,
       priority,
       start_date: startDate ? startDate.toISOString() : null,
-      due_date: endDate ? endDate.toISOString() : null,
-      end_date: endDate ? endDate.toISOString() : null,
+      due_date: endDateTime ? endDateTime.toISOString() : null,
+      end_date: endDateTime ? endDateTime.toISOString() : null,
       phase_id: phaseId,
       project_id: parseInt(projectId),
       song_id: songId ? parseInt(songId) : null,
-      created_by: taskToEdit?.created_by || "", // Zachowujemy oryginalnego twórcę przy edycji
+      created_by: taskToEdit?.created_by || "",
       activityType: activityType || null,
       responsible_user: responsibleUser || null,
       planned_budget: plannedBudget ? parseFloat(plannedBudget) : null,
@@ -518,54 +531,88 @@ function BaseTaskForm({
 
                 <div className="space-y-2">
                   <Label htmlFor="endDate" className="text-[#fffcf2] font-roboto">
-                    Data zakończenia
+                    Data i godzina zakończenia
                   </Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2] hover:bg-[#403d39]/80",
-                          !endDate && "text-muted-foreground",
-                          isEndDateInvalid && "border-red-500 focus:border-red-500"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-[#252422] border-[#403d39]" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={(date) => setEndDate(date)}
-                        initialFocus
-                        className="bg-[#252422] text-[#fffcf2]"
-                        classNames={{
-                          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                          month: "space-y-4",
-                          caption: "flex justify-center pt-1 relative items-center text-[#fffcf2]",
-                          caption_label: "text-sm font-medium text-[#fffcf2]",
-                          nav: "space-x-1 flex items-center",
-                          nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-[#fffcf2]",
-                          nav_button_previous: "absolute left-1",
-                          nav_button_next: "absolute right-1",
-                          table: "w-full border-collapse space-y-1",
-                          head_row: "flex",
-                          head_cell: "text-[#fffcf2] rounded-md w-9 font-normal text-[0.8rem]",
-                          row: "flex w-full mt-2",
-                          cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-[#403d39] first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                          day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-[#fffcf2]",
-                          day_selected: "bg-[#eb5e28] text-[#fffcf2] hover:bg-[#eb5e28] hover:text-[#fffcf2] focus:bg-[#eb5e28] focus:text-[#fffcf2]",
-                          day_today: "bg-[#403d39] text-[#fffcf2]",
-                          day_outside: "text-[#ccc5b9] opacity-50",
-                          day_disabled: "text-[#ccc5b9] opacity-50",
-                          day_range_middle: "aria-selected:bg-[#403d39] aria-selected:text-[#fffcf2]",
-                          day_hidden: "invisible",
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <div className="relative">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal bg-[#403d39] border-[#403d39] text-[#fffcf2] hover:bg-[#403d39]/80",
+                            !endDate && "text-muted-foreground",
+                            isEndDateInvalid && "border-red-500 focus:border-red-500"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          <div className="flex-1">
+                            {endDate ? format(endDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
+                          </div>
+                          {endTime && <span className="mr-8">{endTime}</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-[#252422] border-[#403d39]" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={endDate}
+                          onSelect={setEndDate}
+                          initialFocus
+                          className="bg-[#252422] text-[#fffcf2]"
+                          classNames={{
+                            months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                            month: "space-y-4",
+                            caption: "flex justify-center pt-1 relative items-center text-[#fffcf2]",
+                            caption_label: "text-sm font-medium text-[#fffcf2]",
+                            nav: "space-x-1 flex items-center",
+                            nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-[#fffcf2]",
+                            nav_button_previous: "absolute left-1",
+                            nav_button_next: "absolute right-1",
+                            table: "w-full border-collapse space-y-1",
+                            head_row: "flex",
+                            head_cell: "text-[#fffcf2] rounded-md w-9 font-normal text-[0.8rem]",
+                            row: "flex w-full mt-2",
+                            cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-[#403d39] first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                            day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-[#fffcf2]",
+                            day_selected: "bg-[#eb5e28] text-[#fffcf2] hover:bg-[#eb5e28] hover:text-[#fffcf2] focus:bg-[#eb5e28] focus:text-[#fffcf2]",
+                            day_today: "bg-[#403d39] text-[#fffcf2]",
+                            day_outside: "text-[#ccc5b9] opacity-50",
+                            day_disabled: "text-[#ccc5b9] opacity-50",
+                            day_range_middle: "aria-selected:bg-[#403d39] aria-selected:text-[#fffcf2]",
+                            day_hidden: "invisible",
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-transparent hover:text-[#eb5e28]"
+                        >
+                          <Clock className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-48 p-0 bg-[#252422] border-[#403d39]">
+                        <ScrollArea className="h-[300px]">
+                          <div className="p-2">
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "px-3 py-2 text-sm rounded-md cursor-pointer hover:bg-[#403d39] text-[#fffcf2]",
+                                  endTime === `${i.toString().padStart(2, "0")}:00` && "bg-[#eb5e28]"
+                                )}
+                                onClick={() => setEndTime(`${i.toString().padStart(2, "0")}:00`)}
+                              >
+                                {`${i.toString().padStart(2, "0")}:00`}
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
 
                 <div className="space-y-2">

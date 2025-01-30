@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Plus, Calendar, Users, DollarSign, Clock, MoreVertical, Search, Bell } from "lucide-react"
+import { ChevronLeft, Plus, Calendar, Users, DollarSign, Clock, MoreVertical, Search, Bell, Settings } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -224,6 +224,12 @@ export default function ProjectPage() {
                 Powrót do dashboardu
               </Link>
               <div className="flex items-center gap-4">
+                <Link
+                  href={`/project/${projectId}/settings`}
+                  className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors"
+                >
+                  <Settings className="w-5 h-5" />
+                </Link>
                 <NotificationsPopover />
                 <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center select-none">
                   <span className="text-[#fffcf2] font-semibold font-montserrat">{userInitials}</span>
@@ -297,7 +303,7 @@ export default function ProjectPage() {
                         selectedSong !== "all" && completedSongs[selectedSong]
                           ? `bg-red-500 text-white data-[state=active]:bg-white data-[state=active]:text-red-500`
                           : `${
-                              `${index + 1}` === (selectedSong !== "all" ? songPhases[selectedSong] || "1" : currentPhase)
+                              selectedSong !== "all" && `${index + 1}` === (selectedSong !== "all" ? songPhases[selectedSong] || "1" : currentPhase)
                               ? "bg-[#eb5e28]/10 text-[#eb5e28]"
                               : ""
                             } data-[state=active]:bg-[#eb5e28] data-[state=active]:text-white`
