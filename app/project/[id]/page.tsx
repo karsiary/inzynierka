@@ -207,7 +207,7 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#252422]">
+    <div className="min-h-screen bg-[#252422] select-none">
       {/* Gradient Background */}
       <div className="absolute top-0 left-0 w-full h-full z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(235,94,40,0.15),rgba(37,36,34,0))]" />
 
@@ -218,14 +218,14 @@ export default function ProjectPage() {
             <div className="flex items-center justify-between">
               <Link
                 href="/dashboard"
-                className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors flex items-center"
+                className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors flex items-center select-none"
               >
                 <ChevronLeft className="w-5 h-5 mr-2" />
                 Powrót do dashboardu
               </Link>
               <div className="flex items-center gap-4">
                 <NotificationsPopover />
-                <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center select-none">
                   <span className="text-[#fffcf2] font-semibold font-montserrat">{userInitials}</span>
                 </div>
               </div>
@@ -245,7 +245,7 @@ export default function ProjectPage() {
 
         {/* Main Content */}
         <main className="container mx-auto px-4 py-6">
-          <Card className="bg-[#403d39] border-none p-6 relative">
+          <Card className="bg-[#403d39] border-none p-6 relative select-none">
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-4">
@@ -275,7 +275,7 @@ export default function ProjectPage() {
                           }
                         }
                       }}
-                      className={`bg-[#eb5e28] hover:bg-[#eb5e28]/90 text-white ${noSelectClass}`}
+                      className="bg-[#eb5e28] hover:bg-[#eb5e28]/90 text-white select-none"
                     >
                       {viewPhase === (songPhases[selectedSong] || "1")
                         ? songPhases[selectedSong] === "4"
@@ -287,7 +287,7 @@ export default function ProjectPage() {
                 </div>
               </div>
 
-              <Tabs defaultValue="1" value={viewPhase} onValueChange={setViewPhase} className="w-full">
+              <Tabs defaultValue="1" value={viewPhase} onValueChange={setViewPhase} className="w-full select-none">
                 <TabsList className="w-full bg-[#252422] border-none mb-6 flex flex-wrap">
                   {["Preprodukcja", "Produkcja", "Inżynieria", "Publishing"].map((phase, index) => (
                     <TabsTrigger
@@ -296,7 +296,11 @@ export default function ProjectPage() {
                       className={`flex-1 ${
                         selectedSong !== "all" && completedSongs[selectedSong]
                           ? `bg-red-500 text-white data-[state=active]:bg-white data-[state=active]:text-red-500`
-                          : "data-[state=active]:bg-[#eb5e28] data-[state=active]:text-white"
+                          : `${
+                              `${index + 1}` === (selectedSong !== "all" ? songPhases[selectedSong] || "1" : currentPhase)
+                              ? "bg-[#eb5e28]/10 text-[#eb5e28]"
+                              : ""
+                            } data-[state=active]:bg-[#eb5e28] data-[state=active]:text-white`
                       } ${
                         selectedSong !== "all" &&
                         `${index + 1}` === (selectedSong !== "all" ? songPhases[selectedSong] || "1" : currentPhase)
