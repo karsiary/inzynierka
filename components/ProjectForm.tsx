@@ -28,6 +28,7 @@ import { pl } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
+import { Card } from "@/components/ui/card"
 
 interface ProjectFormProps {
   onSuccess: () => void
@@ -140,10 +141,6 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
       setNewSongTitle("")
       setCurrentSongAuthors([])
     }
-  }
-
-  const handleRemoveSong = (index: number) => {
-    setSongs(songs.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -558,209 +555,282 @@ export function ProjectForm({ onSuccess, onCancel, initialData }: ProjectFormPro
             </TabsContent>
 
             <TabsContent value="team" className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-[#fffcf2] font-roboto">Dodaj zespół</Label>
+              {/* Kontener dla zespołów */}
+              <Card className="bg-[#403d39] border-none p-4">
+                <div className="space-y-4">
+                  <h3 className="text-[#fffcf2] font-semibold font-montserrat">Dodaj zespół</h3>
+                  
                   <div className="space-y-2">
+                    <Label className="text-[#fffcf2] font-roboto">Wyszukaj zespół</Label>
                     <Input
                       value={searchTeam}
                       onChange={(e) => {
                         setSearchTeam(e.target.value)
                         searchTeams(e.target.value)
                       }}
-                      placeholder="Wyszukaj zespół"
-                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                      placeholder="Wprowadź nazwę zespołu"
+                      className="bg-[#252422] border-[#252422] text-[#fffcf2]"
                     />
                     {teamSearchResults.length > 0 && searchTeam && (
-                      <div className="border rounded-md p-2 bg-[#252422] border-[#403d39]">
+                      <div className="border rounded-md p-2 bg-[#252422] border-[#403d39] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
                         {teamSearchResults.map((team) => (
                           <div
                             key={team.id}
-                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center gap-2"
+                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center justify-between"
                             onClick={() => handleAddTeam(team)}
                           >
                             <span>{team.name}</span>
-                            <Users className="h-4 w-4" />
+                            <Users className="h-4 w-4 text-[#eb5e28]" />
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {teams.map((team) => (
-                    <Badge
-                      key={team.id}
-                      variant="secondary"
-                      className="bg-[#403d39] text-[#fffcf2] flex items-center gap-1"
-                    >
-                      {team.name}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 hover:bg-transparent"
-                        onClick={() => handleRemoveTeam(team.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-[#fffcf2] font-roboto">Dodaj użytkownika</Label>
+                  {teams.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-[#fffcf2] font-roboto">Dodane zespoły</Label>
+                      <div className="flex flex-wrap gap-2 p-2 bg-[#252422] rounded-lg min-h-[40px]">
+                        {teams.map((team) => (
+                          <Badge
+                            key={team.id}
+                            variant="secondary"
+                            className="bg-[#403d39] text-[#fffcf2] px-3 py-1.5 flex items-center gap-2"
+                          >
+                            <Users className="h-3.5 w-3.5 text-[#eb5e28]" />
+                            <span className="text-sm">{team.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0 hover:bg-transparent ml-1 -mr-1"
+                              onClick={() => handleRemoveTeam(team.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Kontener dla użytkowników */}
+              <Card className="bg-[#403d39] border-none p-4">
+                <div className="space-y-4">
+                  <h3 className="text-[#fffcf2] font-semibold font-montserrat">Dodaj użytkownika</h3>
+                  
                   <div className="space-y-2">
+                    <Label className="text-[#fffcf2] font-roboto">Wyszukaj użytkownika</Label>
                     <Input
                       value={searchUser}
                       onChange={(e) => {
                         setSearchUser(e.target.value)
                         searchUsers(e.target.value)
                       }}
-                      placeholder="Wyszukaj użytkownika"
-                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                      placeholder="Wprowadź nazwę lub email użytkownika"
+                      className="bg-[#252422] border-[#252422] text-[#fffcf2]"
                     />
                     {userSearchResults.length > 0 && searchUser && (
-                      <div className="border rounded-md p-2 bg-[#252422] border-[#403d39]">
+                      <div className="border rounded-md p-2 bg-[#252422] border-[#403d39] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
                         {userSearchResults.map((user) => (
                           <div
                             key={user.id}
-                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center gap-2"
+                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center justify-between"
                             onClick={() => handleAddUser(user)}
                           >
                             <span>{user.name}</span>
-                            <User className="h-4 w-4" />
+                            <User className="h-4 w-4 text-[#eb5e28]" />
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {users.map((user) => (
-                    <Badge
-                      key={user.id}
-                      variant="secondary"
-                      className="bg-[#403d39] text-[#fffcf2] flex items-center gap-1"
-                    >
-                      {user.name}
-                      {user.id !== session?.data?.user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-4 p-0 hover:bg-transparent"
-                          onClick={() => handleRemoveUser(user.id)}
+
+                  <div className="space-y-2">
+                    <Label className="text-[#fffcf2] font-roboto">Dodani użytkownicy</Label>
+                    <div className="flex flex-wrap gap-2 p-2 bg-[#252422] rounded-lg min-h-[40px]">
+                      {users.map((user) => (
+                        <Badge
+                          key={user.id}
+                          variant="secondary"
+                          className="bg-[#403d39] text-[#fffcf2] px-3 py-1.5 flex items-center gap-2"
                         >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </Badge>
-                  ))}
+                          <User className="h-3.5 w-3.5 text-[#eb5e28]" />
+                          <span className="text-sm">{user.name}</span>
+                          {user.id !== session?.data?.user?.id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0 hover:bg-transparent ml-1 -mr-1"
+                              onClick={() => handleRemoveUser(user.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </Card>
             </TabsContent>
 
             <TabsContent value="songs" className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="newSongTitle" className="text-[#fffcf2] font-roboto">
-                    Tytuł piosenki
-                  </Label>
-                  <Input
-                    id="newSongTitle"
-                    value={newSongTitle}
-                    onChange={(e) => setNewSongTitle(e.target.value)}
-                    className={cn(
-                      "bg-[#403d39] border-[#403d39] text-[#fffcf2]",
-                      isSongsInvalid && songs.length === 0 && "border-red-500 focus:border-red-500"
-                    )}
-                    placeholder="Wprowadź tytuł piosenki"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-[#fffcf2] font-roboto">Autorzy</Label>
+              {/* Formularz dodawania nowej piosenki */}
+              <Card className="bg-[#403d39] border-none p-4 sticky top-0 z-10">
+                <div className="space-y-4">
+                  <h3 className="text-[#fffcf2] font-semibold font-montserrat">Dodaj nową piosenkę</h3>
+                  
                   <div className="space-y-2">
+                    <Label htmlFor="newSongTitle" className="text-[#fffcf2] font-roboto">
+                      Tytuł piosenki
+                    </Label>
                     <Input
-                      value={searchSongAuthor}
-                      onChange={(e) => {
-                        setSearchSongAuthor(e.target.value)
-                        searchSongAuthors(e.target.value)
-                      }}
-                      placeholder="Wyszukaj autora (użytkownik lub zespół)"
-                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                      id="newSongTitle"
+                      value={newSongTitle}
+                      onChange={(e) => setNewSongTitle(e.target.value)}
+                      className={cn(
+                        "bg-[#252422] border-[#252422] text-[#fffcf2]",
+                        isSongsInvalid && songs.length === 0 && "border-red-500 focus:border-red-500"
+                      )}
+                      placeholder="Wprowadź tytuł piosenki"
                     />
-                    {songAuthorSearchResults.length > 0 && searchSongAuthor && (
-                      <div className="border rounded-md p-2 bg-[#252422] border-[#403d39]">
-                        {songAuthorSearchResults.map((author) => (
-                          <div
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[#fffcf2] font-roboto">Autorzy</Label>
+                    <div className="space-y-2">
+                      <Input
+                        value={searchSongAuthor}
+                        onChange={(e) => {
+                          setSearchSongAuthor(e.target.value)
+                          searchSongAuthors(e.target.value)
+                        }}
+                        placeholder="Wyszukaj autora (użytkownik lub zespół)"
+                        className="bg-[#252422] border-[#252422] text-[#fffcf2]"
+                      />
+                      {songAuthorSearchResults.length > 0 && searchSongAuthor && (
+                        <div className="border rounded-md p-2 bg-[#252422] border-[#403d39] max-h-[200px] overflow-y-auto">
+                          {songAuthorSearchResults.map((author) => (
+                            <div
+                              key={`${author.type}-${author.id}`}
+                              className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center justify-between"
+                              onClick={() => handleAddSongAuthor(author)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>{author.name}</span>
+                                {author.teamName && (
+                                  <span className="text-[#ccc5b9] text-sm">z {author.teamName}</span>
+                                )}
+                              </div>
+                              {author.type === 'user' ? (
+                                <User className="h-4 w-4" />
+                              ) : (
+                                <Users className="h-4 w-4" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {currentSongAuthors.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-[#fffcf2] font-roboto">Wybrani autorzy</Label>
+                      <div className="flex flex-wrap gap-2 p-2 bg-[#252422] rounded-lg min-h-[40px]">
+                        {currentSongAuthors.map((author) => (
+                          <Badge
                             key={`${author.type}-${author.id}`}
-                            className="p-2 hover:bg-[#403d39] cursor-pointer text-[#fffcf2] flex items-center gap-2"
-                            onClick={() => handleAddSongAuthor(author)}
+                            variant="secondary"
+                            className="bg-[#403d39] text-[#fffcf2] px-3 py-1.5 flex items-center gap-2"
                           >
-                            <span>{author.name}</span>
-                            {author.teamName && <span className="text-[#ccc5b9] text-sm">z {author.teamName}</span>}
                             {author.type === 'user' ? (
-                              <User className="h-4 w-4" />
+                              <User className="h-3.5 w-3.5 text-[#eb5e28]" />
                             ) : (
-                              <Users className="h-4 w-4" />
+                              <Users className="h-3.5 w-3.5 text-[#eb5e28]" />
                             )}
-                          </div>
+                            <span className="text-sm">{author.name}</span>
+                            {author.teamName && (
+                              <>
+                                <span className="text-[#ccc5b9] text-xs">•</span>
+                                <span className="text-[#ccc5b9] text-xs">{author.teamName}</span>
+                              </>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0 hover:bg-transparent ml-1 -mr-1"
+                              onClick={() => handleRemoveSongAuthor(author.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </Badge>
                         ))}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {currentSongAuthors.map((author) => (
-                      <Badge
-                        key={`${author.type}-${author.id}`}
-                        variant="secondary"
-                        className="bg-[#403d39] text-[#fffcf2] flex items-center gap-1"
-                      >
-                        {author.name} ({author.type === 'user' ? 'Użytkownik' : 'Zespół'})
+                    </div>
+                  )}
+
+                  <Button 
+                    type="button" 
+                    onClick={handleAddSong}
+                    disabled={!newSongTitle || currentSongAuthors.length === 0}
+                    className="w-full bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90 mt-4"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Dodaj piosenkę
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Lista dodanych piosenek */}
+              <div className="space-y-4">
+                <Label className="text-[#fffcf2] font-roboto block mb-2">
+                  Dodane piosenki
+                </Label>
+                <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
+                  {songs.map((song, index) => (
+                    <div key={index} className="bg-[#403d39] p-4 rounded-lg space-y-2">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#eb5e28] font-semibold min-w-[24px]">#{index + 1}</span>
+                          <h4 className="text-[#fffcf2] font-semibold">{song.title}</h4>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-4 w-4 p-0 hover:bg-transparent"
-                          onClick={() => handleRemoveSongAuthor(author.id)}
+                          className="text-[#ccc5b9] hover:text-red-500"
+                          onClick={() => setSongs(songs.filter((_, i) => i !== index))}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-4 w-4" />
                         </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <Button 
-                  type="button" 
-                  onClick={handleAddSong} 
-                  className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
-                  disabled={!newSongTitle || currentSongAuthors.length === 0}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Dodaj piosenkę
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {songs.map((song, index) => (
-                  <div key={index} className="flex items-center justify-between bg-[#403d39] p-3 rounded-lg">
-                    <div>
-                      <p className="text-[#fffcf2] font-medium">{song.title}</p>
-                      <p className="text-[#ccc5b9] text-sm">
-                        {song.authors.map((author: any) => author.name).join(", ")}
-                      </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {song.authors.map((author) => (
+                          <Badge
+                            key={`${author.type}-${author.id}`}
+                            variant="secondary"
+                            className="bg-[#252422] text-[#fffcf2] px-3 py-1.5 flex items-center gap-2"
+                          >
+                            {author.type === 'user' ? (
+                              <User className="h-3.5 w-3.5 text-[#eb5e28]" />
+                            ) : (
+                              <Users className="h-3.5 w-3.5 text-[#eb5e28]" />
+                            )}
+                            <span className="text-sm">{author.name}</span>
+                            {author.teamName && (
+                              <>
+                                <span className="text-[#ccc5b9] text-xs">•</span>
+                                <span className="text-[#ccc5b9] text-xs">{author.teamName}</span>
+                              </>
+                            )}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveSong(index)}
-                      className="text-[#ccc5b9] hover:text-[#eb5e28]"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </TabsContent>
           </div>
