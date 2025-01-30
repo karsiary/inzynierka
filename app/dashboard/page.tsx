@@ -14,6 +14,7 @@ import { pl } from "date-fns/locale"
 import { useSession, signOut } from "next-auth/react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Sidebar } from "@/components/Sidebar"
 
 export default function DashboardPage() {
   const pathname = usePathname()
@@ -124,73 +125,12 @@ export default function DashboardPage() {
 
         <div className="relative z-10 flex">
           {/* Sidebar */}
-          <aside className="w-64 min-h-screen bg-[#403d39]/50 backdrop-blur-sm border-r border-[#403d39] p-6">
-            <div className="flex items-center mb-8">
-              <span className="text-[#eb5e28] text-2xl font-bold font-montserrat">Audio</span>
-              <span className="text-[#fffcf2] text-2xl font-bold font-montserrat">Plan</span>
-            </div>
-
-            <nav className="space-y-2">
-              <Link
-                href="/dashboard"
-                className={`flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg ${
-                  pathname === "/dashboard" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "hover:bg-[#403d39]"
-                }`}
-              >
-                <BarChart3 className="w-5 h-5" />
-                <span className="font-roboto">Dashboard</span>
-              </Link>
-              <Link
-                href="/projects"
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-                  pathname === "/projects" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "text-[#ccc5b9] hover:bg-[#403d39]"
-                }`}
-              >
-                <FolderKanban className="w-5 h-5" />
-                <span className="font-roboto">Projekty</span>
-              </Link>
-              <Link
-                href="/team"
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-                  pathname === "/team" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "text-[#ccc5b9] hover:bg-[#403d39]"
-                }`}
-              >
-                <Users className="w-5 h-5" />
-                <span className="font-roboto">Zespół</span>
-              </Link>
-              <Link
-                href="/calendar"
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-                  pathname === "/calendar" ? "text-[#fffcf2] bg-[#eb5e28]/10" : "text-[#ccc5b9] hover:bg-[#403d39]"
-                }`}
-              >
-                <Calendar className="w-5 h-5" />
-                <span className="font-roboto">Kalendarz</span>
-              </Link>
-            </nav>
-
-            <div className="absolute bottom-8 left-6 space-y-2">
-              <Link
-                href="/settings"
-                className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39]"
-              >
-                <Settings className="w-5 h-5" />
-                <span className="font-roboto">Ustawienia</span>
-              </Link>
-              <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39] w-full text-left"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-roboto">Wyloguj</span>
-              </button>
-            </div>
-          </aside>
+          <Sidebar />
 
           {/* Main Content */}
-          <main className="flex-1 p-8">
+          <main className="flex-1 p-6">
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">
                   Witaj, {userName}! 👋
@@ -208,7 +148,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Card className="bg-[#403d39] border-none p-6">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
@@ -258,9 +198,9 @@ export default function DashboardPage() {
             {/* Chart and Projects Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               {/* Chart */}
-              <Card className="lg:col-span-2 bg-[#403d39] border-none p-6 pb-2">
+              <Card className="lg:col-span-2 bg-[#403d39] border-none p-5 pb-2">
                 <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 font-montserrat">Aktywność Projektowa</h3>
-                <div className="h-[280px]">
+                <div className="h-[274px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={activityData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ccc5b9" opacity={0.1} />
@@ -291,7 +231,7 @@ export default function DashboardPage() {
               </Card>
 
               {/* Recent Activity */}
-              <Card className="bg-[#403d39] border-none p-6">
+              <Card className="bg-[#403d39] border-none p-5">
                 <h3 className="text-xl font-semibold text-[#fffcf2] font-montserrat mb-8">Ostatnia Aktywność</h3>
                 <div className="space-y-8">
                   {stats?.recentActivity.map((activity: any, index: number) => (
@@ -311,7 +251,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Projects List */}
-            <Card className="bg-[#403d39] border-none p-6">
+            <Card className="bg-[#403d39] border-none p-5">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">Twoje Projekty</h3>
                 <Button
@@ -322,7 +262,7 @@ export default function DashboardPage() {
                   Nowy Projekt
                 </Button>
               </div>
-              <div className="space-y-4 min-h-[400px] max-h-[400px] overflow-y-auto">
+              <div className="space-y-4 min-h-[392px] max-h-[392px] overflow-y-auto">
                 {projects.map((project) => (
                   <div key={project.id} className="bg-[#252422] rounded-lg p-4 flex items-center justify-between hover:bg-[#252422]/80 transition-colors">
                     <Link href={`/project/${project.id}`} className="flex items-center gap-4 flex-1">
