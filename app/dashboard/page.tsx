@@ -140,13 +140,13 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 select-none">
           <Card className="bg-[#403d39] border-none p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
                 <Music2 className="w-6 h-6 text-[#eb5e28]" />
               </div>
-              <div>
+              <div className="select-none">
                 <p className="text-[#ccc5b9] text-sm font-open-sans">Aktywne Projekty</p>
                 <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.activeProjects || 0}</h3>
               </div>
@@ -157,7 +157,7 @@ export default function DashboardPage() {
               <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-[#eb5e28]" />
               </div>
-              <div>
+              <div className="select-none">
                 <p className="text-[#ccc5b9] text-sm font-open-sans">Zakończone Projekty</p>
                 <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.completedProjects || 0}</h3>
               </div>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
               <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
                 <Clock className="w-6 h-6 text-[#eb5e28]" />
               </div>
-              <div>
+              <div className="select-none">
                 <p className="text-[#ccc5b9] text-sm font-open-sans">Projekt kończy się w ciągu 31 dni</p>
                 <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.upcomingProjects || 0}</h3>
               </div>
@@ -179,7 +179,7 @@ export default function DashboardPage() {
               <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
                 <Users className="w-6 h-6 text-[#eb5e28]" />
               </div>
-              <div>
+              <div className="select-none">
                 <p className="text-[#ccc5b9] text-sm font-open-sans">Jesteś członkiem tylu zespołów</p>
                 <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.teamMembers || 0}</h3>
               </div>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
         {/* Chart and Projects Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Chart */}
-          <Card className="lg:col-span-2 bg-[#403d39] border-none p-5 pb-2">
+          <Card className="lg:col-span-2 bg-[#403d39] border-none p-5 pb-2 select-none">
             <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 font-montserrat">Aktywność Projektowa</h3>
             <div className="h-[274px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -224,8 +224,8 @@ export default function DashboardPage() {
 
           {/* Recent Activity */}
           <Card className="bg-[#403d39] border-none p-5">
-            <h3 className="text-xl font-semibold text-[#fffcf2] font-montserrat mb-8">Ostatnia Aktywność</h3>
-            <div className="space-y-8">
+            <h3 className="text-xl font-semibold text-[#fffcf2] font-montserrat mb-8 select-none">Ostatnia Aktywność</h3>
+            <div className="space-y-8 select-none">
               {stats?.recentActivity.map((activity: any, index: number) => (
                 <div key={index} className="flex items-start gap-6 relative">
                   <div className="w-4 h-4 rounded-full bg-[#eb5e28] mt-1.5 shadow-lg shadow-[#eb5e28]/20" />
