@@ -29,56 +29,180 @@ export async function GET(req: Request) {
 
     const [projects, totalProjects, stats, activity] = await Promise.all([
       // Pobierz projekty z paginacją
-      prisma.project.findMany({
-        where: projectAccessCondition,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true
-            }
-          },
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  image: true
+      (async () => {
+        // Pobierz wszystkie projekty dla użytkownika
+        const myProjects = await prisma.project.findMany({
+          where: { userId },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true
+              }
+            },
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true
+                  }
+                }
+              }
+            },
+            teams: {
+              include: {
+                team: true
+              }
+            },
+            songs: {
+              include: {
+                authors: {
+                  include: {
+                    user: true,
+                    team: true
+                  }
                 }
               }
             }
           },
-          teams: {
-            include: {
-              team: true
-            }
+          orderBy: { created_at: 'desc' }
+        });
+
+        const teamProjects = await prisma.project.findMany({
+          where: {
+            AND: [
+              { userId: { not: userId } },
+              { teams: { some: { team: { members: { some: { userId } } } } } }
+            ]
           },
-          songs: {
-            include: {
-              authors: {
-                include: {
-                  user: true,
-                  team: true
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true
+              }
+            },
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true
+                  }
+                }
+              }
+            },
+            teams: {
+              include: {
+                team: true
+              }
+            },
+            songs: {
+              include: {
+                authors: {
+                  include: {
+                    user: true,
+                    team: true
+                  }
                 }
               }
             }
-          }
-        },
-        orderBy: {
-          created_at: "desc"
-        },
-        skip: (page - 1) * limit,
-        take: limit
-      }),
+          },
+          orderBy: { created_at: 'desc' }
+        });
+
+        const memberProjects = await prisma.project.findMany({
+          where: {
+            AND: [
+              { userId: { not: userId } },
+              { members: { some: { userId } } },
+              { teams: { none: { team: { members: { some: { userId } } } } } }
+            ]
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true
+              }
+            },
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true
+                  }
+                }
+              }
+            },
+            teams: {
+              include: {
+                team: true
+              }
+            },
+            songs: {
+              include: {
+                authors: {
+                  include: {
+                    user: true,
+                    team: true
+                  }
+                }
+              }
+            }
+          },
+          orderBy: { created_at: 'desc' }
+        });
+
+        // Połącz wszystkie projekty w odpowiedniej kolejności
+        const allProjects = [...myProjects, ...teamProjects, ...memberProjects];
+        
+        // Zastosuj paginację
+        const start = (page - 1) * limit;
+        const end = start + limit;
+        return allProjects.slice(start, end);
+      })(),
 
       // Pobierz całkowitą liczbę projektów
-      prisma.project.count({
-        where: projectAccessCondition
-      }),
+      (async () => {
+        const [myProjectsCount, teamProjectsCount, memberProjectsCount] = await Promise.all([
+          prisma.project.count({
+            where: { userId }
+          }),
+          prisma.project.count({
+            where: {
+              AND: [
+                { userId: { not: userId } },
+                { teams: { some: { team: { members: { some: { userId } } } } } }
+              ]
+            }
+          }),
+          prisma.project.count({
+            where: {
+              AND: [
+                { userId: { not: userId } },
+                { members: { some: { userId } } },
+                { teams: { none: { team: { members: { some: { userId } } } } } }
+              ]
+            }
+          })
+        ]);
+        return myProjectsCount + teamProjectsCount + memberProjectsCount;
+      })(),
 
       // Pobierz statystyki
       Promise.all([

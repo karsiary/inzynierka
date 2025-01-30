@@ -217,11 +217,11 @@ export default function ProjectPage() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <Link
-                href="/projects"
+                href="/dashboard"
                 className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors flex items-center"
               >
                 <ChevronLeft className="w-5 h-5 mr-2" />
-                Powrót do projektów
+                Powrót do dashboardu
               </Link>
               <div className="flex items-center gap-4">
                 <NotificationsPopover />
@@ -315,7 +315,7 @@ export default function ProjectPage() {
                       phaseId={viewPhase}
                       selectedSong={selectedSong}
                       currentPhase={selectedSong !== "all" ? songPhases[selectedSong] || "1" : currentPhase}
-                      isSongCompleted={selectedSong !== "all" && completedSongs[selectedSong]}
+                      completedSongs={completedSongs}
                       songs={project?.songs || []}
                     />
                     {console.log("ProjectPage - przekazywany selectedSong:", selectedSong)}

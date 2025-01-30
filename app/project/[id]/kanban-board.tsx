@@ -67,11 +67,11 @@ interface KanbanBoardProps {
   projectId: string
   phaseId: string
   selectedSong: string | null
-  isSongCompleted: boolean
+  completedSongs: Record<string, boolean>
   songs: any[]
 }
 
-export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted, songs }: KanbanBoardProps) {
+export function KanbanBoard({ projectId, phaseId, selectedSong, completedSongs, songs }: KanbanBoardProps) {
   const [mounted, setMounted] = useState(false)
   const [columns, setColumns] = useState<ColumnType>({
     todo: {
@@ -275,6 +275,10 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
     setIsAddTaskOpen(true)
   }
 
+  const isTaskFromCompletedSong = (task: Task) => {
+    return task.song_id && completedSongs[task.song_id.toString()]
+  }
+
   if (!mounted) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -303,7 +307,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
           <div key={column.id} className="flex flex-col h-[calc(100vh-400px)]">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">{column.title}</h3>
-              {!isSongCompleted && (
+              {selectedSong === "all" || !completedSongs[selectedSong] && (
                 <Button variant="ghost" size="icon" className="text-[#ccc5b9]" onClick={() => handleAddTask(column.id)}>
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -312,7 +316,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
 
             <Droppable
               droppableId={column.id}
-              isDropDisabled={isSongCompleted}
+              isDropDisabled={selectedSong !== "all" ? completedSongs[selectedSong] : false}
             >
               {(provided) => (
                 <div
@@ -329,7 +333,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, isSongCompleted,
                         key={task.id}
                         draggableId={task.id.toString()}
                         index={index}
-                        isDragDisabled={isSongCompleted}
+                        isDragDisabled={isTaskFromCompletedSong(task)}
                       >
                         {(provided, snapshot) => (
                           <Card
