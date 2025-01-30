@@ -236,27 +236,25 @@ export default function ProjectsPage() {
                       </div>
 
                       {/* Status & Progress */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 w-[180px] -ml-4">
+                        <div className="flex items-center gap-2 ml-4">
                           <div
                             className={`w-2 h-2 rounded-full ${
-                              project.status === "completed"
+                              project.progress === 100
                                 ? "bg-green-500"
-                                : project.status === "active"
-                                  ? "bg-[#eb5e28]"
-                                  : "bg-yellow-500"
+                                : "bg-[#eb5e28]"
                             }`}
                           />
-                          <span className="text-sm text-[#ccc5b9]">{project.status}</span>
+                          <span className="text-sm text-[#ccc5b9]">{project.progress === 100 ? "Zakończony" : "W trakcie"}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-full bg-[#252422] rounded-full h-2">
+                          <div className="w-[100px] bg-[#252422] rounded-full h-2">
                             <div
                               className="h-full bg-[#eb5e28] rounded-full"
                               style={{ width: `${Math.round(project.progress)}%` }}
                             />
                           </div>
-                          <span className="text-sm text-[#eb5e28]">{Math.round(project.progress)}%</span>
+                          <span className="text-sm text-[#eb5e28] min-w-[45px] text-right">{Math.round(project.progress)}%</span>
                         </div>
                       </div>
 

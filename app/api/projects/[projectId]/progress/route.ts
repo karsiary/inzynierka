@@ -63,7 +63,10 @@ export async function GET(
     // Zaktualizuj postęp projektu w bazie danych
     await prisma.project.update({
       where: { id: projectId },
-      data: { progress: totalProgress }
+      data: { 
+        progress: totalProgress,
+        status: totalProgress === 100 ? "completed" : "active"
+      }
     })
 
     return NextResponse.json({ progress: totalProgress })

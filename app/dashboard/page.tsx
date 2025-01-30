@@ -327,27 +327,27 @@ export default function DashboardPage() {
                 {projects.map((project) => (
                   <div key={project.id} className="bg-[#252422] rounded-lg p-4 flex items-center justify-between hover:bg-[#252422]/80 transition-colors">
                     <Link href={`/project/${project.id}`} className="flex items-center gap-4 flex-1">
-                      <div className="w-10 h-10 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
-                        <Music2 className="w-5 h-5 text-[#eb5e28]" />
+                      <div className="w-12 h-12 rounded-xl bg-[#eb5e28]/10 flex items-center justify-center shadow-sm">
+                        <Music2 className="w-6 h-6 text-[#eb5e28]" />
                       </div>
                       <div>
-                        <h4 className="text-[#fffcf2] font-semibold font-montserrat">{project.name}</h4>
-                        <p className="text-xs text-[#ccc5b9] font-open-sans">
+                        <h4 className="text-[#fffcf2] font-semibold font-montserrat tracking-tight">{project.name}</h4>
+                        <p className="text-xs text-[#ccc5b9] font-open-sans mt-0.5">
                           Utworzono: {new Date(project.created_at).toLocaleDateString()} • Autor: {project.user?.name || "Nieznany"}
                         </p>
                       </div>
                     </Link>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm text-[#ccc5b9] font-open-sans">{project.status}</p>
-                        <div className="flex items-center gap-2">
-                          <div className="w-full bg-[#252422] rounded-full h-2">
-                            <div
-                              className="h-full bg-[#eb5e28] rounded-full"
-                              style={{ width: `${Math.round(project.progress)}%` }}
-                            />
-                          </div>
-                          <p className="text-sm text-[#eb5e28] font-open-sans">{Math.round(project.progress)}%</p>
+                    <div className="flex items-center gap-6">
+                      <div className="w-[200px]">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-[#ccc5b9] font-open-sans">{project.progress === 100 ? "Zakończony" : "W trakcie"}</p>
+                          <p className="text-sm text-[#eb5e28] font-open-sans font-medium">{Math.round(project.progress)}%</p>
+                        </div>
+                        <div className="w-full bg-[#252422] rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="h-full bg-[#eb5e28] rounded-full transition-all duration-300 ease-in-out"
+                            style={{ width: `${Math.round(project.progress)}%` }}
+                          />
                         </div>
                       </div>
                       {project.userId === session?.user?.id && (
