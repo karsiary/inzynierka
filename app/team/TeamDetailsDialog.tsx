@@ -47,10 +47,15 @@ interface TeamDetailsDialogProps {
 }
 
 export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDetailsDialogProps) {
+  const { data: session } = useSession()
   const [editedTeam, setEditedTeam] = useState<Team | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<User[]>([])
-  const { data: session } = useSession()
+
+  // Sprawdź, czy zalogowany użytkownik jest administratorem zespołu
+  const isAdmin = editedTeam?.members.some(
+    member => member.userId === session?.user?.id && member.role === "admin"
+  ) ?? false
 
   useEffect(() => {
     setEditedTeam(team)
@@ -131,7 +136,9 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
         <DialogHeader>
           <DialogTitle className="text-2xl font-montserrat">Szczegóły zespołu</DialogTitle>
           <DialogDescription className="text-[#ccc5b9] font-open-sans">
-            Edytuj informacje o zespole i zarządzaj jego członkami
+            {isAdmin 
+              ? "Edytuj informacje o zespole i zarządzaj jego członkami" 
+              : "Przeglądaj informacje o zespole"}
           </DialogDescription>
         </DialogHeader>
 
@@ -145,6 +152,7 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
               value={editedTeam.name}
               onChange={(e) => setEditedTeam({ ...editedTeam, name: e.target.value })}
               className="bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
+              disabled={!isAdmin}
             />
           </div>
 
@@ -167,6 +175,9 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
                   <Select
                     value={member.role}
                     onValueChange={(newRole: "admin" | "member") => {
+                      // Nie pozwalamy na zmianę roli jeśli nie jesteśmy adminem
+                      if (!isAdmin) return
+                      
                       // Nie pozwalamy na zmianę roli administratora
                       if (member.role === "admin" && member.user.id === session.user.id) {
                         return
@@ -179,7 +190,7 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
                         )
                       }))
                     }}
-                    disabled={member.role === "admin" && member.user.id === session.user.id}
+                    disabled={!isAdmin || (member.role === "admin" && member.user.id === session.user.id)}
                   >
                     <SelectTrigger className="w-[140px] h-8 text-xs bg-[#252422] border-none text-[#ccc5b9]">
                       <SelectValue />
@@ -193,7 +204,7 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  {member.role !== "admin" && (
+                  {member.role !== "admin" && isAdmin && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -207,48 +218,50 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
               </div>
             ))}
 
-            {/* Wyszukiwanie i dodawanie nowych członków */}
-            <div className="space-y-4">
-              <Label className="text-lg text-[#fffcf2] font-roboto">Dodaj nowego członka</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#ccc5b9]" />
-                <Input
-                  placeholder="Wyszukaj użytkowników..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
-                />
-              </div>
+            {/* Wyszukiwanie i dodawanie nowych członków - tylko dla administratorów */}
+            {isAdmin && (
+              <div className="space-y-4">
+                <Label className="text-lg text-[#fffcf2] font-roboto">Dodaj nowego członka</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#ccc5b9]" />
+                  <Input
+                    placeholder="Wyszukaj użytkowników..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
+                  />
+                </div>
 
-              {searchQuery.length >= 2 && searchResults.length > 0 && (
-                <ScrollArea className="h-[200px] rounded-md border border-[#403d39] bg-[#252422] p-4">
-                  <div className="space-y-2">
-                    {searchResults.map((user) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-[#403d39] cursor-pointer"
-                        onClick={() => handleAddMember(user)}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
-                            <span className="text-sm font-semibold text-[#fffcf2]">
-                              {getUserInitials(user.name)}
-                            </span>
+                {searchQuery.length >= 2 && searchResults.length > 0 && (
+                  <ScrollArea className="h-[200px] rounded-md border border-[#403d39] bg-[#252422] p-4">
+                    <div className="space-y-2">
+                      {searchResults.map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-[#403d39] cursor-pointer"
+                          onClick={() => handleAddMember(user)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
+                              <span className="text-sm font-semibold text-[#fffcf2]">
+                                {getUserInitials(user.name)}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-[#fffcf2]">{user.name}</p>
+                              <p className="text-xs text-[#ccc5b9]">{user.email}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#fffcf2]">{user.name}</p>
-                            <p className="text-xs text-[#ccc5b9]">{user.email}</p>
-                          </div>
+                          <Button variant="ghost" size="sm" className="hover:bg-[#eb5e28]/20 hover:text-[#fffcf2]">
+                            Dodaj
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="sm" className="hover:bg-[#eb5e28]/20 hover:text-[#fffcf2]">
-                          Dodaj
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

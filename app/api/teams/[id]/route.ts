@@ -28,6 +28,13 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           },
         },
       },
+      include: {
+        members: {
+          include: {
+            user: true
+          }
+        }
+      }
     })
 
     if (!team) {
@@ -45,11 +52,39 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       data: {
         name: data.name,
         members: {
-          deleteMany: {}, // Usuń wszystkich członków
-          create: data.members.map((member: any) => ({
-            userId: member.userId,
-            role: member.role,
-          })),
+          deleteMany: {
+            // Nie usuwaj administratorów
+            AND: [
+              { teamId: teamId },
+              { role: { not: "admin" } }
+            ]
+          },
+          create: data.members
+            .filter((member: any) => {
+              // Sprawdź, czy członek już istnieje w zespole
+              return !team.members?.some((existingMember: any) => 
+                existingMember.userId === member.userId
+              )
+            })
+            .map((member: any) => ({
+              userId: member.userId,
+              role: member.role,
+            })),
+          update: data.members
+            .filter((member: any) => {
+              // Znajdź istniejących członków
+              return team.members?.some((existingMember: any) => 
+                existingMember.userId === member.userId
+              )
+            })
+            .map((member: any) => ({
+              where: {
+                id: team.members.find((m: any) => m.userId === member.userId)?.id
+              },
+              data: {
+                role: member.role === "admin" ? "admin" : member.role,
+              }
+            })),
         },
       },
       include: {

@@ -16,6 +16,13 @@ export async function GET(req: Request) {
     }
 
     const teams = await prisma.team.findMany({
+      where: {
+        members: {
+          some: {
+            userId: session.user.id,
+          },
+        },
+      },
       include: {
         members: {
           include: {
