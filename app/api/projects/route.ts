@@ -42,8 +42,13 @@ export async function GET(req: Request) {
         },
         songs: {
           include: {
-            author: true,
-          },
+            authors: {
+              include: {
+                user: true,
+                team: true
+              }
+            }
+          }
         },
       },
       orderBy: {
@@ -75,7 +80,6 @@ export async function POST(req: Request) {
     const {
       name,
       description,
-      status,
       startDate,
       endDate,
       budgetType,
@@ -99,31 +103,22 @@ export async function POST(req: Request) {
       data: {
         name,
         description,
-        status,
-        role: "admin",
+        userId: session.user.id,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        budgetType,
+        budgetType: budgetType || "global",
         budgetGlobal: budgetGlobal ? Number(budgetGlobal) : null,
         budgetPhase1: budgetPhases?.[0] ? Number(budgetPhases[0]) : null,
         budgetPhase2: budgetPhases?.[1] ? Number(budgetPhases[1]) : null,
         budgetPhase3: budgetPhases?.[2] ? Number(budgetPhases[2]) : null,
         budgetPhase4: budgetPhases?.[3] ? Number(budgetPhases[3]) : null,
-        user: {
-          connect: {
-            id: session.user.id
-          }
-        },
-        // Dodawanie członków projektu
         members: {
           create: [
-            // Dodaj twórcę jako administratora
             {
               userId: session.user.id,
               role: "admin",
             },
-            // Dodaj wybranych użytkowników (pomijając twórcę)
-            ...users
+            ...(users || [])
               .filter((user: any) => user.id !== session.user.id)
               .map((user: any) => ({
                 userId: user.id,
@@ -131,16 +126,15 @@ export async function POST(req: Request) {
               })),
           ],
         },
-        // Dodawanie zespołów
         teams: {
-          create: teams.map((team: any) => ({
+          create: (teams || []).map((team: any) => ({
             teamId: team.id,
           })),
         },
-        // Dodawanie piosenek
         songs: {
-          create: songs.map((song: any) => ({
+          create: (songs || []).map((song: any) => ({
             title: song.title,
+            status: "pending",
             authors: {
               create: song.authors.map((author: any) => ({
                 type: author.type,

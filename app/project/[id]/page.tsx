@@ -61,6 +61,12 @@ export default function ProjectPage() {
     fetchProject()
   }, [projectId])
 
+  useEffect(() => {
+    if (selectedSong !== "all" && completedSongs[selectedSong]) {
+      setViewPhase(songPhases[selectedSong] || "1")
+    }
+  }, [selectedSong, completedSongs, songPhases])
+
   async function fetchProject() {
     try {
       setLoading(true)
@@ -78,6 +84,16 @@ export default function ProjectPage() {
       console.log("Pobrane dane projektu:", data)
       console.log("Piosenki w projekcie:", data.songs)
       setProject(data)
+
+      // Inicjalizacja faz piosenek z bazy danych
+      const initialSongPhases = {}
+      const initialCompletedSongs = {}
+      data.songs.forEach(song => {
+        initialSongPhases[song.id] = song.phase || "1"
+        initialCompletedSongs[song.id] = song.status === "completed"
+      })
+      setSongPhases(initialSongPhases)
+      setCompletedSongs(initialCompletedSongs)
     } catch (error) {
       console.error("Error fetching project:", error)
     } finally {
@@ -85,13 +101,47 @@ export default function ProjectPage() {
     }
   }
 
-  const handlePhaseChange = () => {
+  async function fetchProjectProgress() {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/progress`)
+      if (!response.ok) {
+        throw new Error('Błąd podczas pobierania postępu projektu')
+      }
+      const data = await response.json()
+      setProject(prev => prev ? { ...prev, progress: data.progress } : null)
+    } catch (error) {
+      console.error("Error fetching project progress:", error)
+    }
+  }
+
+  const handlePhaseChange = async () => {
     if (selectedSong !== "all") {
       const currentSongPhase = songPhases[selectedSong] || "1"
       if (currentSongPhase !== "4") {
         const nextPhase = ((Number.parseInt(currentSongPhase) % 4) + 1).toString()
-        setSongPhases((prev) => ({ ...prev, [selectedSong]: nextPhase }))
-        setViewPhase(nextPhase)
+        
+        try {
+          const response = await fetch(`/api/songs/${selectedSong}/phase`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phase: nextPhase })
+          })
+
+          if (!response.ok) {
+            throw new Error('Błąd podczas aktualizacji fazy piosenki')
+          }
+
+          setSongPhases((prev) => ({ ...prev, [selectedSong]: nextPhase }))
+          setViewPhase(nextPhase)
+          
+          // Zaktualizuj tylko pasek postępu
+          await fetchProjectProgress()
+        } catch (error) {
+          console.error("Error updating song phase:", error)
+          // Możesz tutaj dodać obsługę błędów, np. wyświetlanie komunikatu
+        }
       }
     } else if (currentPhase !== "4") {
       const nextPhase = ((Number.parseInt(currentPhase) % 4) + 1).toString()
@@ -113,6 +163,31 @@ export default function ProjectPage() {
 
   const handleSongChange = (songId: string) => {
     setSelectedSong(songId)
+  }
+
+  const handleProjectEnd = async () => {
+    try {
+      const response = await fetch(`/api/songs/${selectedSong}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'completed' })
+      })
+
+      if (!response.ok) {
+        throw new Error('Błąd podczas aktualizacji statusu piosenki')
+      }
+
+      setCompletedSongs((prev) => ({ ...prev, [selectedSong]: true }))
+      setIsProjectEndModalOpen(false)
+
+      // Zaktualizuj tylko pasek postępu
+      await fetchProjectProgress()
+    } catch (error) {
+      console.error("Error completing song:", error)
+      // Możesz tutaj dodać obsługę błędów, np. wyświetlanie komunikatu
+    }
   }
 
   if (loading) {
@@ -218,7 +293,7 @@ export default function ProjectPage() {
                       value={`${index + 1}`}
                       className={`flex-1 ${
                         selectedSong !== "all" && completedSongs[selectedSong]
-                          ? "bg-red-500 text-white"
+                          ? `bg-red-500 text-white data-[state=active]:bg-white data-[state=active]:text-red-500`
                           : "data-[state=active]:bg-[#eb5e28] data-[state=active]:text-white"
                       } ${
                         selectedSong !== "all" &&
@@ -263,10 +338,7 @@ export default function ProjectPage() {
                     Anuluj
                   </Button>
                   <Button
-                    onClick={() => {
-                      setCompletedSongs((prev) => ({ ...prev, [selectedSong]: true }))
-                      setIsProjectEndModalOpen(false)
-                    }}
+                    onClick={handleProjectEnd}
                     className="bg-[#eb5e28] hover:bg-[#eb5e28]/90 text-white"
                   >
                     Zakończ utwór

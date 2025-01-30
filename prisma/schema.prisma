@@ -123,6 +123,7 @@ model Song {
   id        Int      @id @default(autoincrement())
   title     String
   status    String   @default("pending")
+  phase     String   @default("1")
   projectId Int
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   authors   SongAuthor[]

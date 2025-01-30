@@ -32,6 +32,14 @@ export async function GET(req: Request) {
       prisma.project.findMany({
         where: projectAccessCondition,
         include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          },
           members: {
             include: {
               user: {

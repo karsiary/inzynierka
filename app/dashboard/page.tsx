@@ -332,8 +332,8 @@ export default function DashboardPage() {
                       </div>
                       <div>
                         <h4 className="text-[#fffcf2] font-semibold font-montserrat">{project.name}</h4>
-                        <p className="text-sm text-[#ccc5b9] font-open-sans">
-                          {project.role} • Termin: {new Date(project.due_date).toLocaleDateString()}
+                        <p className="text-xs text-[#ccc5b9] font-open-sans">
+                          Utworzono: {new Date(project.created_at).toLocaleDateString()} • Autor: {project.user?.name || "Nieznany"}
                         </p>
                       </div>
                     </Link>
