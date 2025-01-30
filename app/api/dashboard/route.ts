@@ -89,7 +89,15 @@ export async function GET(req: Request) {
         }),
         prisma.project.count({
           where: {
-            AND: [projectAccessCondition, { status: "completed" }]
+            AND: [
+              projectAccessCondition,
+              {
+                endDate: {
+                  gte: new Date(),
+                  lte: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000)
+                }
+              }
+            ]
           }
         }),
         prisma.project.count({
@@ -97,10 +105,10 @@ export async function GET(req: Request) {
             AND: [
               projectAccessCondition,
               {
-                due_date: {
-                  gte: new Date(),
-                  lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                }
+                OR: [
+                  { status: "completed" },
+                  { progress: 100 }
+                ]
               }
             ]
           }
@@ -115,7 +123,12 @@ export async function GET(req: Request) {
           }
         }),
         prisma.teamMember.count({
-          where: { userId }
+          where: { 
+            userId,
+            role: {
+              not: "owner"
+            }
+          }
         })
       ]),
 
@@ -155,15 +168,15 @@ export async function GET(req: Request) {
       })()
     ])
 
-    const [activeProjects, completedProjects, upcomingDeadlines, recentActivity, teamMembersCount] = stats
+    const [activeProjects, upcomingProjects, completedProjects, recentActivity, teamMembersCount] = stats
 
     return NextResponse.json({
       projects,
       totalProjects,
       stats: {
         activeProjects,
+        upcomingProjects,
         completedProjects,
-        upcomingDeadlines,
         teamMembers: teamMembersCount,
         recentActivity: recentActivity.map((activity) => ({
           description: activity.description,

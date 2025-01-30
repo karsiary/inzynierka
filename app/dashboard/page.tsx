@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Music2, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
+import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Music2, ChevronLeft, ChevronRight, MoreHorizontal, Clock } from "lucide-react"
 import Link from "next/link"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { usePathname, useRouter } from "next/navigation"
@@ -44,6 +44,7 @@ export default function DashboardPage() {
         throw new Error("Błąd podczas pobierania danych")
       }
       const data = await response.json()
+      console.log("Dashboard data:", data)
       
       setProjects(data.projects)
       setStats(data.stats)
@@ -222,21 +223,10 @@ export default function DashboardPage() {
               <Card className="bg-[#403d39] border-none p-6">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-[#eb5e28]" />
+                    <Calendar className="w-6 h-6 text-[#eb5e28]" />
                   </div>
                   <div>
-                    <p className="text-[#ccc5b9] text-sm font-open-sans">Członkowie Zespołu</p>
-                    <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.teamMembers || 0}</h3>
-                  </div>
-                </div>
-              </Card>
-              <Card className="bg-[#403d39] border-none p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
-                    <FolderKanban className="w-6 h-6 text-[#eb5e28]" />
-                  </div>
-                  <div>
-                    <p className="text-[#ccc5b9] text-sm font-open-sans">Ukończone Projekty</p>
+                    <p className="text-[#ccc5b9] text-sm font-open-sans">Zakończone Projekty</p>
                     <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.completedProjects || 0}</h3>
                   </div>
                 </div>
@@ -244,11 +234,22 @@ export default function DashboardPage() {
               <Card className="bg-[#403d39] border-none p-6">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-[#eb5e28]" />
+                    <Clock className="w-6 h-6 text-[#eb5e28]" />
                   </div>
                   <div>
-                    <p className="text-[#ccc5b9] text-sm font-open-sans">Nadchodzące Terminy</p>
-                    <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.upcomingDeadlines || 0}</h3>
+                    <p className="text-[#ccc5b9] text-sm font-open-sans">Projekt kończy się w ciągu 31 dni</p>
+                    <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.upcomingProjects || 0}</h3>
+                  </div>
+                </div>
+              </Card>
+              <Card className="bg-[#403d39] border-none p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
+                    <Users className="w-6 h-6 text-[#eb5e28]" />
+                  </div>
+                  <div>
+                    <p className="text-[#ccc5b9] text-sm font-open-sans">Jesteś członkiem tylu zespołów</p>
+                    <h3 className="text-2xl font-bold text-[#fffcf2] font-montserrat">{stats?.teamMembers || 0}</h3>
                   </div>
                 </div>
               </Card>
@@ -291,20 +292,18 @@ export default function DashboardPage() {
 
               {/* Recent Activity */}
               <Card className="bg-[#403d39] border-none p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">Ostatnia Aktywność</h3>
-                  <Button variant="ghost" size="sm" className="text-[#eb5e28] hover:text-[#eb5e28]/80">
-                    Zobacz wszystko
-                  </Button>
-                </div>
-                <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-[#fffcf2] font-montserrat mb-8">Ostatnia Aktywność</h3>
+                <div className="space-y-8">
                   {stats?.recentActivity.map((activity: any, index: number) => (
-                    <div key={index} className="flex items-center gap-4">
-                      <div className="w-2 h-2 rounded-full bg-[#eb5e28]" />
-                      <div>
-                        <p className="text-[#fffcf2] font-open-sans">{activity.description}</p>
-                        <p className="text-sm text-[#ccc5b9]">{activity.time}</p>
+                    <div key={index} className="flex items-start gap-6 relative">
+                      <div className="w-4 h-4 rounded-full bg-[#eb5e28] mt-1.5 shadow-lg shadow-[#eb5e28]/20" />
+                      <div className="flex-1">
+                        <p className="text-[#fffcf2] font-open-sans text-base leading-relaxed tracking-wide">{activity.description}</p>
+                        <p className="text-sm text-[#ccc5b9] mt-2 font-medium tracking-wide">{activity.time}</p>
                       </div>
+                      {index !== stats.recentActivity.length - 1 && (
+                        <div className="absolute left-[7px] top-6 w-0.5 h-[calc(100%+16px)] bg-gradient-to-b from-[#eb5e28]/20 to-transparent" />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -323,7 +322,7 @@ export default function DashboardPage() {
                   Nowy Projekt
                 </Button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-4 min-h-[400px] max-h-[400px] overflow-y-auto">
                 {projects.map((project) => (
                   <div key={project.id} className="bg-[#252422] rounded-lg p-4 flex items-center justify-between hover:bg-[#252422]/80 transition-colors">
                     <Link href={`/project/${project.id}`} className="flex items-center gap-4 flex-1">
