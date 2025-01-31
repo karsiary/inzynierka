@@ -157,49 +157,64 @@ export async function DELETE(
 
     try {
       // 1. Usuń komentarze i checklisty dla wszystkich zadań
-      const tasks = await prisma.task.findMany({
-        where: { project_id: projectId }
+      await prisma.taskComment.deleteMany({
+        where: {
+          task: {
+            project_id: projectId
+          }
+        }
       })
-
-      for (const task of tasks) {
-        await prisma.comment.deleteMany({
-          where: { task_id: task.id }
-        })
-        await prisma.checklistItem.deleteMany({
-          where: { task_id: task.id }
-        })
-      }
+      
+      await prisma.taskChecklistItem.deleteMany({
+        where: {
+          task: {
+            project_id: projectId
+          }
+        }
+      })
 
       // 2. Usuń wszystkie zadania
       await prisma.task.deleteMany({
-        where: { project_id: projectId }
+        where: {
+          project_id: projectId
+        }
       })
 
       // 3. Usuń autorów piosenek
-      for (const song of project.songs) {
-        await prisma.songAuthor.deleteMany({
-          where: { songId: song.id }
-        })
-      }
+      await prisma.songAuthor.deleteMany({
+        where: {
+          song: {
+            projectId
+          }
+        }
+      })
 
       // 4. Usuń piosenki
       await prisma.song.deleteMany({
-        where: { projectId }
+        where: {
+          projectId
+        }
       })
 
       // 5. Usuń powiązania z zespołami
       await prisma.projectTeam.deleteMany({
-        where: { projectId }
+        where: {
+          projectId
+        }
       })
 
       // 6. Usuń członków projektu
       await prisma.projectMember.deleteMany({
-        where: { projectId }
+        where: {
+          projectId
+        }
       })
 
       // 7. Na końcu usuń sam projekt
       await prisma.project.delete({
-        where: { id: projectId }
+        where: {
+          id: projectId
+        }
       })
 
       return NextResponse.json({ success: true })
@@ -214,6 +229,107 @@ export async function DELETE(
     console.error("Błąd główny:", error)
     return NextResponse.json(
       { error: "Wystąpił nieoczekiwany błąd" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { projectId: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    const projectId = parseInt(params.projectId, 10)
+
+    if (isNaN(projectId)) {
+      return NextResponse.json(
+        { error: "Invalid project ID" },
+        { status: 400 }
+      )
+    }
+
+    const { name, endDate } = await request.json()
+
+    // Sprawdź czy projekt istnieje i czy użytkownik ma do niego uprawnienia
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        members: true
+      }
+    })
+
+    if (!project) {
+      return NextResponse.json(
+        { error: "Project not found" },
+        { status: 404 }
+      )
+    }
+
+    // Sprawdź czy użytkownik jest administratorem projektu
+    const isAdmin = project.members.some(
+      member => member.userId === session.user.id && member.role === "admin"
+    )
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized - only project admin can update the project" },
+        { status: 403 }
+      )
+    }
+
+    // Aktualizuj projekt
+    const updatedProject = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        name: name,
+        endDate: endDate ? new Date(endDate) : project.endDate
+      },
+      include: {
+        members: {
+          include: {
+            user: true
+          }
+        },
+        teams: {
+          include: {
+            team: {
+              include: {
+                members: {
+                  include: {
+                    user: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        songs: {
+          include: {
+            authors: {
+              include: {
+                user: true,
+                team: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(updatedProject)
+  } catch (error) {
+    console.error("Error updating project:", error)
+    return NextResponse.json(
+      { error: "Internal Server Error" },
       { status: 500 }
     )
   }

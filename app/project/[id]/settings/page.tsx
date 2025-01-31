@@ -16,6 +16,12 @@ import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { format } from "date-fns"
+import { pl } from "date-fns/locale"
+import { CalendarIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 const roles = [
   "muzyk",
@@ -70,10 +76,22 @@ export default function ProjectSettingsPage() {
   const [searchSongAuthor, setSearchSongAuthor] = useState("")
   const [currentSongAuthors, setCurrentSongAuthors] = useState<any[]>([])
   const [songAuthorSearchResults, setSongAuthorSearchResults] = useState<any[]>([])
+  const [newProjectName, setNewProjectName] = useState("")
+  const [newEndDate, setNewEndDate] = useState<Date>()
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchProject()
   }, [projectId])
+
+  useEffect(() => {
+    // Ustaw domyślną datę zakończenia z projektu
+    if (project?.endDate) {
+      setNewEndDate(new Date(project.endDate))
+    }
+  }, [project])
 
   async function fetchProject() {
     try {
@@ -296,6 +314,58 @@ export default function ProjectSettingsPage() {
     } catch (error) {
       console.error("Error searching song authors:", error)
       setSongAuthorSearchResults([])
+    }
+  }
+
+  const handleUpdateProject = async () => {
+    if (!isCurrentUserAdmin) return
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newProjectName || project?.name,
+          endDate: newEndDate ? format(newEndDate, "yyyy-MM-dd") : project?.endDate
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Błąd podczas aktualizacji projektu')
+      }
+
+      const updatedProject = await response.json()
+      setProject(updatedProject)
+      setNewProjectName("")
+      setNewEndDate(undefined)
+    } catch (error) {
+      console.error("Error updating project:", error)
+    }
+  }
+
+  const handleDeleteProject = async () => {
+    if (!isCurrentUserAdmin) return
+
+    try {
+      setIsDeleting(true)
+      setDeleteError(null)
+
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Błąd podczas usuwania projektu')
+      }
+
+      router.push('/dashboard')
+    } catch (error) {
+      console.error("Error deleting project:", error)
+      setDeleteError(error instanceof Error ? error.message : "Wystąpił błąd podczas usuwania projektu")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -573,8 +643,140 @@ export default function ProjectSettingsPage() {
               ))}
             </div>
           </Card>
+
+          {isCurrentUserAdmin && (
+            <Card className="bg-[#403d39] border-none p-6 mt-6">
+              <h2 className="text-xl font-bold text-[#fffcf2] mb-6 font-montserrat">Ustawienia projektu</h2>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="projectName" className="text-[#fffcf2] font-roboto">Nazwa projektu</Label>
+                  <Input
+                    id="projectName"
+                    placeholder={project?.name}
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    className="bg-[#252422] border-[#252422] text-[#fffcf2]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="endDate" className="text-[#fffcf2] font-roboto">Data zakończenia</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal bg-[#252422] border-[#252422] text-[#fffcf2] hover:bg-[#252422]/80",
+                          !newEndDate && "text-[#ccc5b9]"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEndDate ? format(newEndDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-[#252422] border-[#403d39]" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={newEndDate}
+                        onSelect={setNewEndDate}
+                        initialFocus
+                        className="bg-[#252422] text-[#fffcf2]"
+                        classNames={{
+                          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                          month: "space-y-4",
+                          caption: "flex justify-center pt-1 relative items-center text-[#fffcf2]",
+                          caption_label: "text-sm font-medium text-[#fffcf2]",
+                          nav: "space-x-1 flex items-center",
+                          nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-[#fffcf2]",
+                          nav_button_previous: "absolute left-1",
+                          nav_button_next: "absolute right-1",
+                          table: "w-full border-collapse space-y-1",
+                          head_row: "flex",
+                          head_cell: "text-[#fffcf2] rounded-md w-9 font-normal text-[0.8rem]",
+                          row: "flex w-full mt-2",
+                          cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-[#403d39] first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                          day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-[#fffcf2]",
+                          day_selected: "bg-[#eb5e28] text-[#fffcf2] hover:bg-[#eb5e28] hover:text-[#fffcf2] focus:bg-[#eb5e28] focus:text-[#fffcf2]",
+                          day_today: "bg-[#403d39] text-[#fffcf2]",
+                          day_outside: "text-[#ccc5b9] opacity-50",
+                          day_disabled: "text-[#ccc5b9] opacity-50",
+                          day_range_middle: "aria-selected:bg-[#403d39] aria-selected:text-[#fffcf2]",
+                          day_hidden: "invisible",
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button 
+                    onClick={handleUpdateProject}
+                    className="bg-[#eb5e28] text-[#fffcf2] hover:bg-[#eb5e28]/90"
+                  >
+                    Zapisz zmiany
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="bg-red-600 text-[#fffcf2] hover:bg-red-700"
+                  >
+                    Usuń projekt
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
         </main>
       </div>
+
+      <Dialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={(open) => {
+          if (!isDeleting) {
+            setIsDeleteDialogOpen(open)
+            if (!open) {
+              setDeleteError(null)
+            }
+          }
+        }}
+      >
+        <DialogContent className="bg-[#252422] border-[#403d39] text-[#fffcf2]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Potwierdzenie usunięcia</DialogTitle>
+            <DialogDescription className="text-[#ccc5b9]">
+              Czy na pewno chcesz usunąć ten projekt? Ta akcja jest nieodwracalna.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <div className="text-red-500 text-sm mt-2 mb-4">
+              {deleteError}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (!isDeleting) {
+                  setIsDeleteDialogOpen(false)
+                  setDeleteError(null)
+                }
+              }}
+              disabled={isDeleting}
+              className="text-[#ccc5b9] hover:text-[#fffcf2] hover:bg-[#403d39]"
+            >
+              Anuluj
+            </Button>
+            <Button
+              onClick={handleDeleteProject}
+              disabled={isDeleting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isDeleting ? "Usuwanie..." : "Usuń projekt"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 
