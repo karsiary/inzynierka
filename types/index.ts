@@ -1,4 +1,4 @@
-import { Project as PrismaProject, Activity as PrismaActivity, Team as PrismaTeam, TeamMember as PrismaTeamMember, User as PrismaUser } from "@prisma/client"
+import { Project as PrismaProject, Activity as PrismaActivity, Team as PrismaTeam, TeamMember as PrismaTeamMember, User as PrismaUser, Song as PrismaSong, SongAuthor as PrismaSongAuthor } from "@prisma/client"
 
 export type Project = PrismaProject
 
@@ -31,4 +31,8 @@ export type UserStats = {
   upcomingDeadlines: number
   teamMembers: number
   recentActivity: ActivityItem[]
-} 
+}
+
+export type Song = PrismaSong
+
+export type SongAuthor = PrismaSongAuthor 

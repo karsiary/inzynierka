@@ -17,80 +17,81 @@ export async function PUT(
       )
     }
 
-    const songId = parseInt(params.id)
-    const { status } = await req.json()
+    const songId = parseInt(params.id, 10)
 
     if (isNaN(songId)) {
       return NextResponse.json(
-        { error: "Nieprawidłowe ID piosenki" },
+        { error: "Invalid song ID" },
         { status: 400 }
       )
     }
 
-    // Aktualizacja statusu piosenki
-    const song = await prisma.song.update({
+    const { status } = await req.json()
+
+    if (!status || !["pending", "in_progress", "completed"].includes(status)) {
+      return NextResponse.json(
+        { error: "Invalid status value" },
+        { status: 400 }
+      )
+    }
+
+    // Sprawdź czy piosenka istnieje i czy użytkownik ma do niej dostęp
+    const song = await prisma.song.findUnique({
       where: { id: songId },
-      data: { status },
       include: {
-        authors: {
+        project: {
           include: {
-            user: true,
-            team: true
+            members: true,
+            teams: {
+              include: {
+                team: {
+                  include: {
+                    members: true
+                  }
+                }
+              }
+            }
           }
         }
       }
     })
 
-    // Dodaj wpis o aktywności
-    await prisma.activity.create({
-      data: {
-        type: "update_song_status",
-        description: `Zaktualizowano status piosenki "${song.title}" na ${status}`,
-        userId: session.user.id
-      }
+    if (!song) {
+      return NextResponse.json(
+        { error: "Song not found" },
+        { status: 404 }
+      )
+    }
+
+    // Sprawdź uprawnienia
+    const isProjectMember = song.project.members.some(member => member.userId === session.user.id)
+    const isTeamMember = song.project.teams.some(pt => 
+      pt.team.members.some(tm => tm.userId === session.user.id)
+    )
+
+    if (!isProjectMember && !isTeamMember) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      )
+    }
+
+    // Aktualizuj status piosenki
+    const updatedSong = await prisma.song.update({
+      where: { id: songId },
+      data: { status }
     })
 
-    // Pobierz wszystkie piosenki z projektu
-    const songs = await prisma.song.findMany({
-      where: { projectId: song.projectId }
+    // Aktualizuj postęp projektu
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/projects/${song.projectId}/progress`, {
+      method: 'PUT'
     })
 
-    // Oblicz postęp dla każdej piosenki
-    const songProgresses = songs.map(song => {
-      // Najpierw sprawdź, czy piosenka jest zakończona
-      if (song.status === "completed") {
-        return 100
-      }
-      
-      // Jeśli nie jest zakończona, sprawdź fazę
-      switch (song.phase) {
-        case "1": // Preprodukcja
-          return 0
-        case "2": // Produkcja
-          return 25
-        case "3": // Inżynieria
-          return 50
-        case "4": // Publishing
-          return 75
-        default:
-          return 0
-      }
-    })
-
-    // Oblicz średni postęp projektu
-    const totalProgress = songProgresses.reduce((sum, progress) => sum + progress, 0) / songs.length
-
-    // Zaktualizuj postęp projektu
-    await prisma.project.update({
-      where: { id: song.projectId },
-      data: { progress: totalProgress }
-    })
-
-    return NextResponse.json(song)
+    return NextResponse.json(updatedSong)
   } catch (error) {
     console.error("Error updating song status:", error)
     return NextResponse.json(
-      { error: "Wystąpił błąd podczas aktualizacji statusu piosenki" },
+      { error: "Internal Server Error" },
       { status: 500 }
     )
   }

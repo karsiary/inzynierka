@@ -5,13 +5,17 @@ import { useParams, useRouter } from "next/navigation"
 import { Layout } from "@/components/Layout"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
-import { ChevronLeft, Settings } from "lucide-react"
+import { ChevronLeft, Settings, User as UserIcon, Users, Plus, X } from "lucide-react"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { useSession } from "next-auth/react"
-import type { Project, User } from "@/types"
+import type { Project, User, Song, SongAuthor, Team } from "@/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 
 const roles = [
   "muzyk",
@@ -30,11 +34,25 @@ interface ExtendedUser extends User {
   userRoles?: string[];
 }
 
+interface ExtendedProject extends Project {
+  songs?: (Song & {
+    authors?: (SongAuthor & {
+      user?: User;
+      team?: Team;
+    })[];
+  })[];
+}
+
+interface SongAuthorWithDetails extends SongAuthor {
+  user?: User;
+  team?: Team;
+}
+
 export default function ProjectSettingsPage() {
   const { data: session } = useSession()
   const params = useParams()
   const router = useRouter()
-  const [project, setProject] = useState<Project | null>(null)
+  const [project, setProject] = useState<ExtendedProject | null>(null)
   const [loading, setLoading] = useState(true)
   const [members, setMembers] = useState<ExtendedUser[]>([])
   const projectId = params.id as string
@@ -47,6 +65,11 @@ export default function ProjectSettingsPage() {
   const isCurrentUserAdmin = members.find(
     member => member.id === session?.user?.id
   )?.projectRole === "admin"
+
+  const [newSongTitle, setNewSongTitle] = useState("")
+  const [searchSongAuthor, setSearchSongAuthor] = useState("")
+  const [currentSongAuthors, setCurrentSongAuthors] = useState<any[]>([])
+  const [songAuthorSearchResults, setSongAuthorSearchResults] = useState<any[]>([])
 
   useEffect(() => {
     fetchProject()
@@ -175,6 +198,107 @@ export default function ProjectSettingsPage() {
     }
   }
 
+  const handleSongPhaseChange = async (songId: number, newPhase: string) => {
+    try {
+      const response = await fetch(`/api/songs/${songId}/phase`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phase: newPhase })
+      })
+
+      if (!response.ok) {
+        throw new Error('Błąd podczas aktualizacji fazy')
+      }
+
+      // Aktualizacja stanu lokalnego
+      setProject(prev => {
+        if (!prev) return null
+        return {
+          ...prev,
+          songs: prev.songs?.map(song => 
+            song.id === songId ? { ...song, phase: newPhase } : song
+          )
+        }
+      })
+
+      // Odśwież projekt, aby pobrać zaktualizowany postęp
+      fetchProject()
+    } catch (error) {
+      console.error("Error updating song phase:", error)
+    }
+  }
+
+  const handleAddSongAuthor = (author: any) => {
+    if (!currentSongAuthors.find(a => a.id === author.id)) {
+      setCurrentSongAuthors([...currentSongAuthors, author])
+    }
+    setSearchSongAuthor("")
+    setSongAuthorSearchResults([])
+  }
+
+  const handleRemoveSongAuthor = (authorId: string) => {
+    setCurrentSongAuthors(currentSongAuthors.filter(author => author.id !== authorId))
+  }
+
+  const handleAddSong = async () => {
+    if (!newSongTitle || currentSongAuthors.length === 0) return
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/songs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: newSongTitle,
+          authors: currentSongAuthors
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Błąd podczas dodawania piosenki')
+      }
+
+      setNewSongTitle("")
+      setCurrentSongAuthors([])
+      fetchProject() // Odśwież projekt, aby pobrać nową piosenkę
+    } catch (error) {
+      console.error("Error adding song:", error)
+    }
+  }
+
+  const searchSongAuthors = async (query: string) => {
+    if (!query) {
+      setSongAuthorSearchResults([])
+      return
+    }
+
+    try {
+      // Pobierz zalogowanego użytkownika
+      const currentUser = session?.user
+      
+      // Przygotuj listę wyników
+      let results = []
+
+      // Wyszukaj wśród dodanych użytkowników (zalogowany użytkownik już tam jest)
+      const usersResults = members.filter(user => 
+        user.name?.toLowerCase().includes(query.toLowerCase()) || 
+        user.email?.toLowerCase().includes(query.toLowerCase())
+      ).map(user => ({
+        ...user,
+        type: 'user'
+      }))
+
+      results = [...usersResults]
+      setSongAuthorSearchResults(results)
+    } catch (error) {
+      console.error("Error searching song authors:", error)
+      setSongAuthorSearchResults([])
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#252422] flex items-center justify-center">
@@ -248,88 +372,193 @@ export default function ProjectSettingsPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex flex-wrap gap-1 min-w-[200px] justify-end">
-                      {(() => {
-                        try {
-                          const roles = member.userRoles ? JSON.parse(member.userRoles) : []
-                          return roles.map((role: string) => (
-                            <Badge 
-                              key={role}
-                              variant="secondary" 
-                              className={`bg-[#403d39] text-[#fffcf2] ${
-                                isCurrentUserAdmin || member.id === session?.user?.id
-                                  ? "cursor-pointer hover:bg-[#eb5e28]"
-                                  : "opacity-75"
-                              } whitespace-nowrap`}
-                              onClick={() => {
-                                if (isCurrentUserAdmin || member.id === session?.user?.id) {
-                                  handleUserRolesChange(member.id, role)
-                                }
-                              }}
-                            >
-                              {role}
-                            </Badge>
-                          ))
-                        } catch {
-                          return null
-                        }
-                      })()}
+                      {roles.map((role) => (
+                        <Badge
+                          key={role}
+                          variant="secondary"
+                          className={cn(
+                            "cursor-pointer transition-colors",
+                            member.userRoles?.includes(role)
+                              ? "bg-[#eb5e28] text-[#fffcf2]"
+                              : "bg-[#252422] text-[#ccc5b9] hover:bg-[#eb5e28]/10"
+                          )}
+                          onClick={() => handleUserRolesChange(member.id, role)}
+                        >
+                          {role}
+                        </Badge>
+                      ))}
                     </div>
-
-                    <Select
-                      value={member.projectRole || "user"}
-                      onValueChange={(value) => handleProjectRoleChange(member.id, value)}
-                      disabled={
-                        member.id === session?.user?.id || // Nie można zmienić własnej roli
-                        !isCurrentUserAdmin || // Tylko admin może zmieniać role
-                        member.id === project.userId // Nie można zmienić roli twórcy projektu
-                      }
-                    >
-                      <SelectTrigger className="w-[140px] bg-[#403d39] border-none text-[#fffcf2]">
-                        <SelectValue placeholder="Wybierz typ" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#252422] border-[#403d39]">
-                        <SelectItem value="admin" className="text-[#fffcf2]">Administrator</SelectItem>
-                        <SelectItem value="user" className="text-[#fffcf2]">Użytkownik</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <div className="flex flex-wrap gap-2 min-w-[200px]">
-                      <Select 
-                        onValueChange={(value) => handleUserRolesChange(member.id, value)}
-                        value=""
-                        disabled={!isCurrentUserAdmin && member.id !== session?.user?.id}
+                    {isCurrentUserAdmin && member.id !== session?.user?.id && (
+                      <Select
+                        value={member.projectRole || "user"}
+                        onValueChange={(value) => handleProjectRoleChange(member.id, value)}
                       >
-                        <SelectTrigger className={`w-[200px] bg-[#403d39] border-none text-[#fffcf2] ${
-                          !isCurrentUserAdmin && member.id !== session?.user?.id ? "opacity-50" : ""
-                        }`}>
-                          <SelectValue placeholder="Dodaj role" />
+                        <SelectTrigger className="w-[120px] bg-[#252422] border-[#252422] text-[#fffcf2]">
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-[#252422] border-[#403d39]">
-                          <ScrollArea className="h-[200px]">
-                            {roles.filter(role => {
-                              try {
-                                const currentRoles = member.userRoles ? JSON.parse(member.userRoles) : []
-                                return !currentRoles.includes(role)
-                              } catch {
-                                return true
-                              }
-                            }).map((role) => (
-                              <SelectItem key={role} value={role} className="text-[#fffcf2]">
-                                {role}
-                              </SelectItem>
-                            ))}
-                          </ScrollArea>
+                          <SelectItem value="admin" className="text-[#fffcf2]">
+                            Admin
+                          </SelectItem>
+                          <SelectItem value="user" className="text-[#fffcf2]">
+                            Użytkownik
+                          </SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
+                    )}
                   </div>
                 </div>
               ))}
-              {members.length === 0 && (
-                <div className="text-center text-[#ccc5b9] py-4">
-                  Brak osób zaangażowanych w projekt
+            </div>
+          </Card>
+
+          {/* Zakładka Piosenki */}
+          <Card className="bg-[#403d39] border-none p-6 mt-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-[#fffcf2] font-montserrat">Piosenki w projekcie</h2>
+              <Badge variant="secondary" className="bg-[#eb5e28] text-[#fffcf2]">
+                {project.songs?.length || 0} piosenek
+              </Badge>
+            </div>
+
+            {/* Formularz dodawania nowej piosenki */}
+            <Card className="bg-[#252422] border-none p-4 mb-6">
+              <div className="space-y-4">
+                <h3 className="text-[#fffcf2] font-semibold font-montserrat">Dodaj nową piosenkę</h3>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="newSongTitle" className="text-[#fffcf2] font-roboto">
+                    Tytuł piosenki
+                  </Label>
+                  <Input
+                    id="newSongTitle"
+                    value={newSongTitle}
+                    onChange={(e) => setNewSongTitle(e.target.value)}
+                    className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                    placeholder="Wprowadź tytuł piosenki"
+                  />
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <Label className="text-[#fffcf2] font-roboto">Autorzy</Label>
+                  <div className="space-y-2">
+                    <Input
+                      value={searchSongAuthor}
+                      onChange={(e) => {
+                        setSearchSongAuthor(e.target.value)
+                        searchSongAuthors(e.target.value)
+                      }}
+                      placeholder="Wyszukaj autora"
+                      className="bg-[#403d39] border-[#403d39] text-[#fffcf2]"
+                    />
+                    {songAuthorSearchResults.length > 0 && searchSongAuthor && (
+                      <div className="border rounded-md p-2 bg-[#403d39] border-[#252422] max-h-[200px] overflow-y-auto">
+                        {songAuthorSearchResults.map((author) => (
+                          <div
+                            key={`${author.type}-${author.id}`}
+                            className="p-2 hover:bg-[#252422] cursor-pointer text-[#fffcf2] flex items-center justify-between"
+                            onClick={() => handleAddSongAuthor(author)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{author.name}</span>
+                            </div>
+                            {author.type === 'user' ? (
+                              <UserIcon className="h-4 w-4" />
+                            ) : (
+                              <Users className="h-4 w-4" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {currentSongAuthors.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-[#fffcf2] font-roboto">Wybrani autorzy</Label>
+                    <div className="flex flex-wrap gap-2 p-2 bg-[#403d39] rounded-lg min-h-[40px]">
+                      {currentSongAuthors.map((author) => (
+                        <Badge
+                          key={`${author.type}-${author.id}`}
+                          variant="secondary"
+                          className="bg-[#252422] text-[#fffcf2] px-3 py-1.5 flex items-center gap-2"
+                        >
+                          {author.type === 'user' ? (
+                            <UserIcon className="h-3.5 w-3.5 text-[#eb5e28]" />
+                          ) : (
+                            <Users className="h-3.5 w-3.5 text-[#eb5e28]" />
+                          )}
+                          <span className="text-sm">{author.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 hover:bg-transparent ml-1 -mr-1"
+                            onClick={() => handleRemoveSongAuthor(author.id)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button 
+                  type="button" 
+                  onClick={handleAddSong}
+                  disabled={!newSongTitle || currentSongAuthors.length === 0}
+                  className="w-full bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90 mt-4"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Dodaj piosenkę
+                </Button>
+              </div>
+            </Card>
+
+            {/* Lista piosenek */}
+            <div className="space-y-4">
+              {project.songs?.map((song) => (
+                <div key={song.id} className="bg-[#252422] p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[#fffcf2] font-semibold">{song.title}</h4>
+                      <div className="flex items-center gap-2">
+                        {song.authors?.map((author: SongAuthorWithDetails) => (
+                          <Badge
+                            key={`${author.type}-${author.id}`}
+                            variant="secondary"
+                            className="bg-[#403d39] text-[#ccc5b9] px-2 py-1 flex items-center gap-1 text-xs"
+                          >
+                            {author.type === 'user' ? (
+                              <UserIcon className="h-3 w-3 text-[#eb5e28]" />
+                            ) : (
+                              <Users className="h-3 w-3 text-[#eb5e28]" />
+                            )}
+                            <span>
+                              {author.type === 'user' ? author.user?.name : author.team?.name}
+                            </span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <Select
+                      value={song.phase}
+                      onValueChange={(value) => handleSongPhaseChange(song.id, value)}
+                    >
+                      <SelectTrigger className="w-[100px] bg-[#403d39] border-[#403d39] text-[#fffcf2] h-8 text-sm">
+                        <SelectValue placeholder="Faza" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#252422] border-[#403d39]">
+                        <SelectItem value="1" className="text-[#fffcf2]">Faza 1</SelectItem>
+                        <SelectItem value="2" className="text-[#fffcf2]">Faza 2</SelectItem>
+                        <SelectItem value="3" className="text-[#fffcf2]">Faza 3</SelectItem>
+                        <SelectItem value="4" className="text-[#fffcf2]">Faza 4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
         </main>
