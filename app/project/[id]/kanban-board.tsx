@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, MoreHorizontal, Trash2, Music2, MessageSquare, CheckSquare } from "lucide-react"
+import { Plus, MoreHorizontal, Trash2, Music2, MessageSquare, CheckSquare, Settings } from "lucide-react"
 import { AddTaskDialog } from "./add-task-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 
 const DragDropContext = dynamic(
   () => import("@hello-pangea/dnd").then(mod => mod.DragDropContext),
@@ -307,11 +308,13 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, completedSongs, 
           <div key={column.id} className="flex flex-col h-[calc(100vh-400px)]">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold text-[#fffcf2] font-montserrat">{column.title}</h3>
-              {(selectedSong === "all" || !completedSongs[selectedSong]) && (
-                <Button variant="ghost" size="icon" className="text-[#ccc5b9]" onClick={() => handleAddTask(column.id)}>
-                  <Plus className="w-4 h-4" />
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {(selectedSong === "all" || !completedSongs[selectedSong]) && (
+                  <Button variant="ghost" size="icon" className="text-[#ccc5b9]" onClick={() => handleAddTask(column.id)}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
 
             <Droppable
@@ -448,6 +451,11 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, completedSongs, 
         selectedSong={selectedSong}
         songs={songs}
       />
+      <div className="absolute top-4 right-4">
+        <Link href={`/project/${projectId}/settings`} className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors">
+          <Settings className="w-5 h-5" />
+        </Link>
+      </div>
       <style jsx>{`
         /* Prevent text selection during drag */
         [data-rbd-draggable-context-id] {

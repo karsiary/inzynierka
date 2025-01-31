@@ -224,12 +224,6 @@ export default function ProjectPage() {
                 Powrót do dashboardu
               </Link>
               <div className="flex items-center gap-4">
-                <Link
-                  href={`/project/${projectId}/settings`}
-                  className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors"
-                >
-                  <Settings className="w-5 h-5" />
-                </Link>
                 <NotificationsPopover />
                 <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center select-none">
                   <span className="text-[#fffcf2] font-semibold font-montserrat">{userInitials}</span>
