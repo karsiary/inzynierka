@@ -259,8 +259,6 @@ export default function ProjectPage() {
                     onSongChange={handleSongChange}
                     showAllOption={true}
                   />
-                </div>
-                <div className="flex items-center gap-4">
                   {selectedSong !== "all" && !completedSongs[selectedSong] && (
                     <Button
                       onClick={() => {
@@ -284,6 +282,8 @@ export default function ProjectPage() {
                         : "Pokaż aktualną fazę utworu"}
                     </Button>
                   )}
+                </div>
+                <div className="flex items-center gap-4">
                 </div>
               </div>
 

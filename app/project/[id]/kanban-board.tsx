@@ -452,7 +452,7 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, completedSongs, 
         songs={songs}
       />
       <div className="absolute top-4 right-4">
-        <Link href={`/project/${projectId}/settings`} className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors">
+        <Link href={`/project/${projectId}/settings`} className="text-[#ccc5b9] hover:text-[#eb5e28] transition-colors mr-6">
           <Settings className="w-5 h-5" />
         </Link>
       </div>

@@ -360,14 +360,43 @@ export default function ProjectSettingsPage() {
               {members.map((member) => (
                 <div key={member.id} className="flex items-center justify-between bg-[#252422] p-4 rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-[#eb5e28] flex items-center justify-center">
-                      <span className="text-sm font-semibold text-[#fffcf2]">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center",
+                      member.projectRole === "admin" ? "bg-[#fffcf2]" : "bg-[#eb5e28]"
+                    )}>
+                      <span className={cn(
+                        "text-sm font-semibold",
+                        member.projectRole === "admin" ? "text-[#eb5e28]" : "text-[#fffcf2]"
+                      )}>
                         {member.name?.split(" ").map((n) => n[0]).join("") || "U"}
                       </span>
                     </div>
-                    <div>
-                      <p className="text-[#fffcf2] font-medium">{member.name}</p>
-                      <p className="text-sm text-[#ccc5b9]">{member.email}</p>
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <p className={cn(
+                          "font-medium",
+                          member.projectRole === "admin" ? "text-[#eb5e28]" : "text-[#fffcf2]"
+                        )}>{member.name}</p>
+                        <p className="text-sm text-[#ccc5b9]">{member.email}</p>
+                      </div>
+                      {isCurrentUserAdmin && member.id !== session?.user?.id && (
+                        <Select
+                          value={member.projectRole || "user"}
+                          onValueChange={(value) => handleProjectRoleChange(member.id, value)}
+                        >
+                          <SelectTrigger className="w-[120px] bg-[#252422] border-[#252422] text-[#fffcf2]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#252422] border-[#403d39]">
+                            <SelectItem value="admin" className="text-[#fffcf2]">
+                              Admin
+                            </SelectItem>
+                            <SelectItem value="user" className="text-[#fffcf2]">
+                              Użytkownik
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -388,24 +417,6 @@ export default function ProjectSettingsPage() {
                         </Badge>
                       ))}
                     </div>
-                    {isCurrentUserAdmin && member.id !== session?.user?.id && (
-                      <Select
-                        value={member.projectRole || "user"}
-                        onValueChange={(value) => handleProjectRoleChange(member.id, value)}
-                      >
-                        <SelectTrigger className="w-[120px] bg-[#252422] border-[#252422] text-[#fffcf2]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#252422] border-[#403d39]">
-                          <SelectItem value="admin" className="text-[#fffcf2]">
-                            Admin
-                          </SelectItem>
-                          <SelectItem value="user" className="text-[#fffcf2]">
-                            Użytkownik
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
                   </div>
                 </div>
               ))}
@@ -518,10 +529,11 @@ export default function ProjectSettingsPage() {
 
             {/* Lista piosenek */}
             <div className="space-y-4">
-              {project.songs?.map((song) => (
+              {project.songs?.map((song, index) => (
                 <div key={song.id} className="bg-[#252422] p-4 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
+                      <span className="text-[#eb5e28] font-semibold">{index + 1}.</span>
                       <h4 className="text-[#fffcf2] font-semibold">{song.title}</h4>
                       <div className="flex items-center gap-2">
                         {song.authors?.map((author: SongAuthorWithDetails) => (
@@ -546,7 +558,7 @@ export default function ProjectSettingsPage() {
                       value={song.phase}
                       onValueChange={(value) => handleSongPhaseChange(song.id, value)}
                     >
-                      <SelectTrigger className="w-[100px] bg-[#403d39] border-[#403d39] text-[#fffcf2] h-8 text-sm">
+                      <SelectTrigger className="w-[100px] bg-[#403d39] border-[#403d39] text-[#fffcf2] h-8 text-sm mr-6">
                         <SelectValue placeholder="Faza" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#252422] border-[#403d39]">
