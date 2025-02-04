@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { calculateProjectProgress } from "@/app/utils/progress"
 
 export async function PUT(
   req: Request,
@@ -82,9 +83,21 @@ export async function PUT(
       data: { phase }
     })
 
-    // Aktualizuj postęp projektu
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/projects/${song.projectId}/progress`, {
-      method: 'PUT'
+    // Pobierz wszystkie piosenki projektu
+    const songs = await prisma.song.findMany({
+      where: { projectId: song.projectId }
+    })
+
+    // Oblicz nowy postęp projektu
+    const totalProgress = calculateProjectProgress(songs)
+
+    // Zaktualizuj postęp projektu w bazie danych
+    await prisma.project.update({
+      where: { id: song.projectId },
+      data: { 
+        progress: totalProgress,
+        status: totalProgress === 100 ? "completed" : "active"
+      }
     })
 
     return NextResponse.json(updatedSong)
