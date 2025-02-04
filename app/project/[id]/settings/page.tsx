@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Layout } from "@/components/Layout"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { ChevronLeft, Settings, User as UserIcon, Users, Plus, X } from "lucide-react"
@@ -81,6 +80,10 @@ export default function ProjectSettingsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isDeleteSongDialogOpen, setIsDeleteSongDialogOpen] = useState(false)
+  const [songToDelete, setSongToDelete] = useState<number | null>(null)
+  const [isDeletingSong, setIsDeletingSong] = useState(false)
+  const [deleteSongError, setDeleteSongError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchProject()
@@ -369,6 +372,32 @@ export default function ProjectSettingsPage() {
     }
   }
 
+  const handleDeleteSong = async (songId: number) => {
+    try {
+      setIsDeletingSong(true)
+      setDeleteSongError(null)
+
+      const response = await fetch(`/api/projects/${projectId}/songs/${songId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Błąd podczas usuwania piosenki')
+      }
+
+      // Odśwież projekt po usunięciu piosenki
+      await fetchProject()
+      setIsDeleteSongDialogOpen(false)
+      setSongToDelete(null)
+    } catch (error) {
+      console.error("Error deleting song:", error)
+      setDeleteSongError(error.message || 'Wystąpił błąd podczas usuwania piosenki')
+    } finally {
+      setIsDeletingSong(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#252422] flex items-center justify-center">
@@ -624,20 +653,32 @@ export default function ProjectSettingsPage() {
                         ))}
                       </div>
                     </div>
-                    <Select
-                      value={song.phase}
-                      onValueChange={(value) => handleSongPhaseChange(song.id, value)}
-                    >
-                      <SelectTrigger className="w-[100px] bg-[#403d39] border-[#403d39] text-[#fffcf2] h-8 text-sm mr-6">
-                        <SelectValue placeholder="Faza" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#252422] border-[#403d39]">
-                        <SelectItem value="1" className="text-[#fffcf2]">Faza 1</SelectItem>
-                        <SelectItem value="2" className="text-[#fffcf2]">Faza 2</SelectItem>
-                        <SelectItem value="3" className="text-[#fffcf2]">Faza 3</SelectItem>
-                        <SelectItem value="4" className="text-[#fffcf2]">Faza 4</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-4">
+                      <Select
+                        value={song.phase}
+                        onValueChange={(value) => handleSongPhaseChange(song.id, value)}
+                      >
+                        <SelectTrigger className="w-[100px] bg-[#403d39] border-[#403d39] text-[#fffcf2] h-8 text-sm mr-6">
+                          <SelectValue placeholder="Faza" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#252422] border-[#403d39]">
+                          <SelectItem value="1" className="text-[#fffcf2]">Faza 1</SelectItem>
+                          <SelectItem value="2" className="text-[#fffcf2]">Faza 2</SelectItem>
+                          <SelectItem value="3" className="text-[#fffcf2]">Faza 3</SelectItem>
+                          <SelectItem value="4" className="text-[#fffcf2]">Faza 4</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => {
+                          setSongToDelete(song.id)
+                          setIsDeleteSongDialogOpen(true)
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -773,6 +814,39 @@ export default function ProjectSettingsPage() {
               className="bg-red-500 hover:bg-red-600 text-white"
             >
               {isDeleting ? "Usuwanie..." : "Usuń projekt"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteSongDialogOpen} onOpenChange={setIsDeleteSongDialogOpen}>
+        <DialogContent className="bg-[#252422] border-[#403d39]">
+          <DialogHeader>
+            <DialogTitle className="text-[#fffcf2]">Usuń piosenkę</DialogTitle>
+            <DialogDescription className="text-[#d3d1cb]">
+              Czy na pewno chcesz usunąć tę piosenkę? Tej operacji nie można cofnąć.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteSongError && (
+            <div className="text-red-500 text-sm">{deleteSongError}</div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteSongDialogOpen(false)
+                setSongToDelete(null)
+              }}
+              className="bg-[#403d39] border-[#403d39] text-[#fffcf2] hover:bg-[#4a4642] hover:text-[#fffcf2]"
+            >
+              Anuluj
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => songToDelete && handleDeleteSong(songToDelete)}
+              disabled={isDeletingSong}
+            >
+              {isDeletingSong ? "Usuwanie..." : "Usuń"}
             </Button>
           </DialogFooter>
         </DialogContent>
