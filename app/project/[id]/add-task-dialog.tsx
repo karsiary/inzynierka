@@ -67,6 +67,10 @@ export function AddTaskDialog({
           const errorData = await response.json()
           throw new Error(errorData.error || 'Błąd podczas aktualizacji zadania')
         }
+
+        const updatedTask = await response.json()
+        onTaskAdded(updatedTask)
+        onOpenChange(false)
       } else {
         const response = await fetch('/api/tasks', {
           method: 'POST',
