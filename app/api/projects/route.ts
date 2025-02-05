@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { createNotification, getProjectUrl } from "@/lib/notifications"
+import { NotificationType } from "@prisma/client"
 
 export async function GET(req: Request) {
   try {
@@ -184,6 +186,27 @@ export async function POST(req: Request) {
         userId: session.user.id,
       },
     })
+
+    // Wyślij powiadomienia do wszystkich członków projektu (oprócz twórcy)
+    const creatorName = session.user.name || "Administrator"
+    if (users?.length > 0) {
+      const notificationPromises = users
+        .filter((user: any) => user.id !== session.user.id)
+        .map((user: any) =>
+          prisma.notification.create({
+            data: {
+              userId: user.id,
+              type: NotificationType.PROJECT_INVITE,
+              title: "Dodano do projektu",
+              message: `Zostałeś dodany do projektu ${name} przez ${creatorName}.`,
+              targetId: String(project.id),
+              actionUrl: getProjectUrl(String(project.id)),
+            }
+          })
+        )
+
+      await Promise.all(notificationPromises)
+    }
 
     return NextResponse.json(project)
   } catch (error) {

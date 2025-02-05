@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { getTaskUrl } from "@/lib/notifications"
+import { NotificationType } from "@prisma/client"
 
 export async function POST(req: Request) {
   try {
@@ -55,11 +57,7 @@ export async function POST(req: Request) {
     const task = await prisma.task.create({
       data: taskData,
       include: {
-        assignees: {
-          include: {
-            user: true
-          }
-        },
+        assignees: true,
         responsible: true,
         creator: true,
         project: true,
@@ -85,6 +83,48 @@ export async function POST(req: Request) {
         userId: session.user.id
       }
     })
+
+    // Wyślij powiadomienia
+    const creatorName = session.user.name || "Administrator"
+    const notificationPromises: Promise<any>[] = []
+
+    // Powiadomienie dla osoby odpowiedzialnej
+    if (task.responsible_user && task.responsible_user !== session.user.id) {
+      notificationPromises.push(
+        prisma.notification.create({
+          data: {
+            userId: task.responsible_user,
+            type: NotificationType.TASK_ASSIGNMENT,
+            title: "Przypisano odpowiedzialność za zadanie",
+            message: `Zostałeś wyznaczony jako osoba odpowiedzialna za zadanie "${task.title}" przez ${creatorName}.`,
+            targetId: String(task.id),
+            actionUrl: getTaskUrl(String(task.project_id), String(task.id)),
+          }
+        })
+      )
+    }
+
+    // Powiadomienia dla przypisanych osób
+    if (data.assigned_to?.length > 0) {
+      const assigneeNotifications = data.assigned_to
+        .filter((userId: string) => userId !== session.user.id && userId !== task.responsible_user)
+        .map((userId: string) =>
+          prisma.notification.create({
+            data: {
+              userId: userId,
+              type: NotificationType.TASK_ASSIGNMENT,
+              title: "Przypisano do zadania",
+              message: `Zostałeś przypisany do zadania "${task.title}" przez ${creatorName}.`,
+              targetId: String(task.id),
+              actionUrl: getTaskUrl(String(task.project_id), String(task.id)),
+            }
+          })
+        )
+
+      notificationPromises.push(...assigneeNotifications)
+    }
+
+    await Promise.all(notificationPromises)
 
     return NextResponse.json(task)
   } catch (error) {

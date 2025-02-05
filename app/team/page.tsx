@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { BarChart3, Users, FolderKanban, Bell, Settings, LogOut, Plus, Calendar, Search, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,9 +22,14 @@ export default function TeamPage() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [isTeamDetailsOpen, setIsTeamDetailsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: session, status } = useSession()
+
+  // Odczytaj parametr "openTeam"
+  const openTeamId = searchParams.get("openTeam")
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -34,8 +39,26 @@ export default function TeamPage() {
     }
   }, [status])
 
+  useEffect(() => {
+    if (openTeamId && teams.length > 0) {
+      const teamToOpen = teams.find(team => team.id === parseInt(openTeamId))
+      if (teamToOpen) {
+        setSelectedTeam(teamToOpen)
+        setIsTeamDetailsOpen(true)
+        
+        // Usuń parametr openTeam z URL
+        const params = new URLSearchParams(searchParams.toString())
+        params.delete("openTeam")
+        router.replace(`/team${params.toString() ? `?${params.toString()}` : ''}`)
+      } else {
+        setError("Nie znaleziono zespołu lub brak uprawnień")
+      }
+    }
+  }, [openTeamId, teams, searchParams, router])
+
   const fetchTeams = async () => {
     try {
+      setError(null)
       const response = await fetch("/api/teams")
       if (!response.ok) {
         throw new Error("Błąd podczas pobierania zespołów")
@@ -44,6 +67,7 @@ export default function TeamPage() {
       setTeams(data)
     } catch (error) {
       console.error("Error fetching teams:", error)
+      setError("Wystąpił błąd podczas pobierania zespołów")
     } finally {
       setLoading(false)
     }
@@ -99,6 +123,9 @@ export default function TeamPage() {
           <div>
             <h1 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">Zespół</h1>
             <p className="text-[#ccc5b9] font-open-sans">Zarządzaj członkami zespołu i ich rolami</p>
+            {error && (
+              <p className="text-[#eb5e28] mt-2">{error}</p>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <NotificationsPopover />

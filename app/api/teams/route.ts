@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { createNotification, getTeamUrl } from "@/lib/notifications"
+import { NotificationType } from "@prisma/client"
 
 // Pobieranie zespołów
 export async function GET(req: Request) {
@@ -115,6 +117,25 @@ export async function POST(req: Request) {
         userId: session.user.id,
       },
     })
+
+    // Wyślij powiadomienia do wszystkich członków zespołu (oprócz twórcy)
+    const creatorName = session.user.name || "Administrator"
+    const notificationPromises = members
+      .filter((member: any) => member.userId !== session.user.id)
+      .map((member: any) =>
+        prisma.notification.create({
+          data: {
+            userId: member.userId,
+            type: NotificationType.TEAM_INVITE,
+            title: "Dodano do zespołu",
+            message: `Zostałeś dodany do zespołu ${name} przez ${creatorName}.`,
+            targetId: String(team.id),
+            actionUrl: getTeamUrl(String(team.id)),
+          }
+        })
+      )
+
+    await Promise.all(notificationPromises)
 
     return NextResponse.json(team)
   } catch (error) {

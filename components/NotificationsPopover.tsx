@@ -1,63 +1,109 @@
 "use client"
 
 import * as React from "react"
-import { Check, Music2, User2, Lock } from "lucide-react"
+import { Bell } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Bell } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { NotificationType } from "@prisma/client"
 
-// Przykładowe powiadomienia
-const notifications = [
-  {
-    id: 1,
-    title: "Nowy komentarz w projekcie",
-    description: "Jan Kowalski skomentował fazę masteringu w projekcie 'Album 2024'",
-    time: "2 min temu",
-    read: false,
-    type: "comment",
-    icon: User2,
-  },
-  {
-    id: 2,
-    title: "Zaktualizowano projekt",
-    description: "Anna Nowak dodała nowe pliki do projektu 'EP Lato'",
-    time: "1 godz temu",
-    read: false,
-    type: "update",
-    icon: Music2,
-  },
-  {
-    id: 3,
-    title: "Zmiana uprawnień",
-    description: "Otrzymałeś uprawnienia administratora w projekcie 'Single 2024'",
-    time: "2 godz temu",
-    read: true,
-    type: "permission",
-    icon: Lock,
-  },
-  // Dodaj więcej powiadomień dla demonstracji przewijania
-  ...Array.from({ length: 5 }, (_, i) => ({
-    id: i + 4,
-    title: "Powiadomienie",
-    description: `Przykładowe powiadomienie ${i + 1}`,
-    time: "3 godz temu",
-    read: true,
-    type: "update",
-    icon: Music2,
-  })),
-]
+type Notification = {
+  id: number;
+  type: NotificationType;
+  title: string;
+  message: string;
+  targetId?: string;
+  actionUrl?: string;
+  isRead: boolean;
+  createdAt: string;
+};
 
 export function NotificationsPopover() {
-  const [unreadCount, setUnreadCount] = React.useState(() => notifications.filter((n) => !n.read).length)
-  const [open, setOpen] = React.useState(false)
+  const router = useRouter();
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const markAllAsRead = React.useCallback(() => {
-    setUnreadCount(0)
-    // Tu zaimplementuj logikę oznaczania jako przeczytane
-  }, [])
+  const fetchNotifications = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("Pobieranie powiadomień...");
+      const res = await fetch('/api/notifications');
+      console.log("Status odpowiedzi:", res.status);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Błąd odpowiedzi:", errorData);
+        throw new Error(errorData.error || "Błąd podczas pobierania powiadomień");
+      }
+
+      const data = await res.json();
+      console.log("Pobrane powiadomienia:", data);
+      
+      setNotifications(data);
+      setUnreadCount(data.filter((n: Notification) => !n.isRead).length);
+    } catch (error) {
+      console.error("Błąd podczas pobierania powiadomień:", error);
+      setError(error instanceof Error ? error.message : "Wystąpił nieznany błąd");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Pobierz powiadomienia przy pierwszym renderowaniu
+  React.useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  // Odśwież powiadomienia przy otwarciu popovera
+  React.useEffect(() => {
+    if (open) {
+      fetchNotifications();
+    }
+  }, [open, fetchNotifications]);
+
+  const markAsRead = React.useCallback(async (id: number) => {
+    try {
+      console.log("Oznaczanie powiadomienia jako przeczytane:", id);
+      const res = await fetch(`/api/notifications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: true }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Błąd podczas aktualizacji powiadomienia");
+      }
+
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Błąd podczas aktualizacji powiadomienia:", error);
+    }
+  }, []);
+
+  const handleNotificationClick = React.useCallback(async (notification: Notification) => {
+    if (!notification.isRead) {
+      await markAsRead(notification.id);
+    }
+
+    if (notification.actionUrl) {
+      // Jeśli to powiadomienie o zespole, przekieruj na stronę /team z odpowiednim parametrem
+      if (notification.type === "TEAM_INVITE" && notification.targetId) {
+        router.push(`/team?openTeam=${notification.targetId}`);
+      } else {
+        router.push(notification.actionUrl);
+      }
+      setOpen(false);
+    }
+  }, [markAsRead, router]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -70,39 +116,41 @@ export function NotificationsPopover() {
       <PopoverContent className="w-80 p-0 bg-[#252422] border-[#403d39]" align="end">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#403d39]">
           <h4 className="font-medium text-[#fffcf2]">Powiadomienia</h4>
+          {loading && <span className="text-xs text-[#ccc5b9]">Ładowanie...</span>}
         </div>
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="w-full bg-[#252422] border-b border-[#403d39] rounded-none">
-            <TabsTrigger value="all" className="flex-1">
-              Wszystkie
-            </TabsTrigger>
-            <TabsTrigger value="unread" className="flex-1">
-              Nieprzeczytane
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
         <ScrollArea className="h-[300px]">
           <div className="py-2">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={cn(
-                  "flex gap-3 px-4 py-3 hover:bg-[#403d39] cursor-pointer transition-colors",
-                  !notification.read && "bg-[#403d39]/50",
-                )}
-              >
-                <div className="mt-1">
-                  <notification.icon className="w-5 h-5 text-[#eb5e28]" />
+            {error ? (
+              <p className="p-4 text-red-500">{error}</p>
+            ) : loading ? (
+              <p className="p-4 text-[#ccc5b9]">Ładowanie powiadomień...</p>
+            ) : notifications.length === 0 ? (
+              <p className="p-4 text-[#fffcf2]">Brak powiadomień</p>
+            ) : (
+              notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={cn(
+                    "flex gap-3 px-4 py-3 hover:bg-[#403d39] cursor-pointer transition-colors",
+                    !notification.isRead && "bg-[#403d39]/50"
+                  )}
+                >
+                  <div className="space-y-1 flex-1">
+                    <p className={cn(
+                      "text-sm",
+                      notification.isRead ? "text-[#ccc5b9]" : "text-[#fffcf2] font-medium"
+                    )}>
+                      {notification.title}
+                    </p>
+                    <p className="text-xs text-[#ccc5b9]">{notification.message}</p>
+                    <p className="text-xs text-[#ccc5b9]/70">
+                      {new Date(notification.createdAt).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className={cn("text-sm", notification.read ? "text-[#ccc5b9]" : "text-[#fffcf2] font-medium")}>
-                    {notification.title}
-                  </p>
-                  <p className="text-xs text-[#ccc5b9]">{notification.description}</p>
-                  <p className="text-xs text-[#ccc5b9]/70">{notification.time}</p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </ScrollArea>
       </PopoverContent>
