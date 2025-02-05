@@ -149,11 +149,56 @@ const initialEvents = [
   },
 ]
 
+// Funkcja mapująca zadanie na wydarzenie
+function mapTaskToEvent(task: any) {
+  if (!task.end_date) return null;
+
+  let color = "#FFB74D"; // domyślny kolor dla typu "Inne"
+  let icon = Music2; // domyślna ikona
+
+  switch (task.activityType?.toLowerCase()) {
+    case "mastering":
+      color = "#F44336"; // czerwony
+      icon = HeadphonesIcon;
+      break;
+    case "nagrywanie":
+      color = "#4CAF50"; // zielony
+      icon = Mic;
+      break;
+    case "miks":
+      color = "#9C27B0"; // fioletowy
+      icon = Settings2;
+      break;
+    case "spotkanie":
+      color = "#00BCD4"; // turkusowy
+      icon = Users;
+      break;
+    case "publishing":
+      color = "#FF9800"; // pomarańczowy
+      icon = Music2;
+      break;
+  }
+
+  return {
+    id: task.id,
+    title: task.title,
+    type: task.activityType || "Inne",
+    start: new Date(task.end_date),
+    end: new Date(task.end_date),
+    description: task.description || "",
+    participants: task.responsible_user ? [task.responsible_user] : [],
+    color,
+    icon,
+    songTitle: task.song?.title,
+    projectTitle: task.project?.title
+  };
+}
+
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 0, 20))
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [events, setEvents] = useState([])
+  const [selectedEvent, setSelectedEvent] = useState(null)
   const [isAddEventOpen, setIsAddEventOpen] = useState(false)
-  const [selectedEvent, setSelectedEvent] = useState<(typeof initialEvents)[0] | null>(null)
-  const [events, setEvents] = useState(initialEvents)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   const handlePrevious = () => setCurrentDate((prev) => subDays(prev, 7))
@@ -162,11 +207,32 @@ export default function CalendarPage() {
   const weekStart = startOfWeek(currentDate, { locale: pl })
   const weekEnd = endOfWeek(currentDate, { locale: pl })
   const hours = Array.from({ length: 24 }, (_, i) => i)
-  //const visibleHours = hours.slice(8, 19) // Godziny od 8:00 do 18:00
 
   const getDateRange = () => {
     return `${format(weekStart, "d")} - ${format(weekEnd, "d MMMM yyyy", { locale: pl })}`
   }
+
+  // Pobieranie zadań z API
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch('/api/tasks');
+      if (!response.ok) throw new Error('Failed to fetch tasks');
+      const tasks = await response.json();
+      
+      // Mapowanie zadań na wydarzenia
+      const mappedEvents = tasks
+        .map(mapTaskToEvent)
+        .filter(event => event !== null);
+      
+      setEvents(mappedEvents);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
   // Helper function to get events for a specific hour and day
   const getEventsForTimeSlot = (hour: number, dayDate: Date) => {
@@ -183,11 +249,7 @@ export default function CalendarPage() {
       const hourStart = new Date(dayDate.setHours(hour, 0, 0, 0))
       const hourEnd = new Date(dayDate.setHours(hour, 59, 59, 999))
 
-      return (
-        isWithinInterval(eventStart, { start: hourStart, end: hourEnd }) ||
-        isWithinInterval(eventEnd, { start: hourStart, end: hourEnd }) ||
-        (eventStart <= hourStart && eventEnd >= hourEnd)
-      )
+      return isWithinInterval(eventStart, { start: hourStart, end: hourEnd })
     })
   }
 
@@ -202,8 +264,11 @@ export default function CalendarPage() {
     return () => clearTimeout(timer)
   }, [])
 
-  const handleAddEvent = (newEvent) => {
-    setEvents((prevEvents) => [...prevEvents, { ...newEvent, id: Date.now() }])
+  const handleAddEvent = (task: any) => {
+    const newEvent = mapTaskToEvent(task)
+    if (newEvent) {
+      setEvents(prev => [...prev, newEvent])
+    }
   }
 
   return (
@@ -241,6 +306,13 @@ export default function CalendarPage() {
                 className="pl-10 bg-[#252422] border-none text-[#ccc5b9] placeholder:text-[#ccc5b9]/50"
               />
             </div>
+            <Button
+              onClick={() => setIsAddEventOpen(true)}
+              className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Dodaj wydarzenie
+            </Button>
           </div>
         </div>
       </Card>
@@ -322,7 +394,7 @@ export default function CalendarPage() {
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
                   style={{ backgroundColor: `${selectedEvent.color}20` }}
                 >
                   <selectedEvent.icon className="w-5 h-5" style={{ color: selectedEvent.color }} />
@@ -335,6 +407,18 @@ export default function CalendarPage() {
                   </p>
                 </div>
               </div>
+              {selectedEvent.songTitle && (
+                <div>
+                  <h4 className="text-sm font-medium text-[#fffcf2] mb-2">Piosenka</h4>
+                  <p className="text-sm text-[#ccc5b9]">{selectedEvent.songTitle}</p>
+                </div>
+              )}
+              {selectedEvent.projectTitle && (
+                <div>
+                  <h4 className="text-sm font-medium text-[#fffcf2] mb-2">Projekt</h4>
+                  <p className="text-sm text-[#ccc5b9]">{selectedEvent.projectTitle}</p>
+                </div>
+              )}
               <div>
                 <h4 className="text-sm font-medium text-[#fffcf2] mb-2">Opis</h4>
                 <p className="text-sm text-[#ccc5b9]">{selectedEvent.description}</p>
@@ -360,9 +444,13 @@ export default function CalendarPage() {
             </div>
           </Card>
         )}
-      </div>
 
-      <AddEventDialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen} onAddEvent={handleAddEvent} />
+        <AddEventDialog
+          open={isAddEventOpen}
+          onOpenChange={setIsAddEventOpen}
+          onTaskAdded={handleAddEvent}
+        />
+      </div>
     </Layout>
   )
 }

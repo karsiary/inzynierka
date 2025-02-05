@@ -80,6 +80,7 @@ interface BaseTaskFormProps {
   projectId: string
   phaseId: string
   defaultStatus?: string
+  isCalendarEvent?: boolean
 }
 
 interface NewTaskFormProps extends BaseTaskFormProps {}

@@ -13,11 +13,14 @@ interface CalendarEventProps {
     participants: string[]
     color: string
     icon: LucideIcon
+    songTitle?: string
+    projectTitle?: string
   }
   isVisible?: boolean
+  onClick?: () => void
 }
 
-export function CalendarEvent({ event, isVisible = true }: CalendarEventProps) {
+export function CalendarEvent({ event, isVisible = true, onClick }: CalendarEventProps) {
   const Icon = event.icon
 
   return (
@@ -29,11 +32,22 @@ export function CalendarEvent({ event, isVisible = true }: CalendarEventProps) {
         backgroundColor: `${event.color}40`,
         borderLeft: `3px solid ${event.color}`,
       }}
+      onClick={onClick}
     >
       <div className="flex items-start gap-2">
         <Icon className="w-4 h-4 shrink-0" style={{ color: event.color }} />
         <div className="min-w-0">
           <div className="font-medium text-[#fffcf2] font-montserrat text-sm truncate">{event.title}</div>
+          {event.songTitle && (
+            <div className="text-xs text-[#ccc5b9] truncate">
+              Piosenka: {event.songTitle}
+            </div>
+          )}
+          {event.projectTitle && (
+            <div className="text-xs text-[#ccc5b9] truncate">
+              Projekt: {event.projectTitle}
+            </div>
+          )}
           <div className="flex items-center gap-2 mt-1">
             <div className="text-xs text-[#ccc5b9] whitespace-nowrap">
               {format(event.start, "HH:mm", { locale: pl })} - {format(event.end, "HH:mm", { locale: pl })}

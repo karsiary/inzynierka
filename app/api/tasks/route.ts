@@ -94,4 +94,60 @@ export async function POST(req: Request) {
       { status: 500 }
     )
   }
+}
+
+export async function GET(req: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    // Pobierz wszystkie zadania z pełnymi informacjami
+    const tasks = await prisma.task.findMany({
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        song: {
+          select: {
+            id: true,
+            title: true,
+          }
+        },
+        responsible: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          }
+        },
+      },
+      where: {
+        OR: [
+          { created_by: session.user.id },
+          { responsible_user: session.user.id },
+          { assignees: { some: { userId: session.user.id } } }
+        ]
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    })
+
+    return NextResponse.json(tasks)
+  } catch (error) {
+    console.error("Error fetching tasks:", error)
+    return NextResponse.json(
+      { error: "Wystąpił błąd podczas pobierania zadań" },
+      { status: 500 }
+    )
+  }
 } 

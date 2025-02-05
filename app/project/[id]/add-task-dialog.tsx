@@ -10,7 +10,7 @@ interface AddTaskDialogProps {
   onOpenChange: (open: boolean) => void
   projectId: string
   phaseId: string
-  onTaskAdded: () => void
+  onTaskAdded: (task: any) => void
   taskToEdit?: any
   currentColumn: string
   selectedSong: string | null
@@ -80,10 +80,12 @@ export function AddTaskDialog({
           const errorData = await response.json()
           throw new Error(errorData.error || 'Błąd podczas tworzenia zadania')
         }
-      }
 
-      onTaskAdded()
-      onOpenChange(false)
+        const createdTask = await response.json()
+
+        onTaskAdded(createdTask)
+        onOpenChange(false)
+      }
     } catch (error) {
       console.error("Error:", error)
       setError(error.message)
