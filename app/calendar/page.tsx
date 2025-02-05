@@ -298,22 +298,6 @@ export default function CalendarPage() {
             </div>
             <h2 className="text-lg font-semibold text-[#fffcf2] font-montserrat">{getDateRange()}</h2>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#ccc5b9]" />
-              <Input
-                placeholder="Szukaj wydarzeń..."
-                className="pl-10 bg-[#252422] border-none text-[#ccc5b9] placeholder:text-[#ccc5b9]/50"
-              />
-            </div>
-            <Button
-              onClick={() => setIsAddEventOpen(true)}
-              className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Dodaj wydarzenie
-            </Button>
-          </div>
         </div>
       </Card>
 

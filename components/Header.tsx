@@ -1,4 +1,5 @@
 import { NotificationsPopover } from "@/components/NotificationsPopover"
+import { useSession } from "next-auth/react";
 
 interface HeaderProps {
   title: string
@@ -6,6 +7,12 @@ interface HeaderProps {
 }
 
 export function Header({ title, description }: HeaderProps) {
+  const { data: session } = useSession();
+  
+  const userInitials = session?.user?.name 
+    ? session.user.name.split(" ").map((word) => word[0]).join("")
+    : "?";
+
   return (
     <div className="flex justify-between items-center mb-8">
       <div>
@@ -15,7 +22,7 @@ export function Header({ title, description }: HeaderProps) {
       <div className="flex items-center gap-4">
         <NotificationsPopover />
         <div className="w-10 h-10 rounded-full bg-[#403d39] flex items-center justify-center">
-          <span className="text-[#fffcf2] font-semibold font-montserrat">JK</span>
+          <span className="text-[#fffcf2] font-semibold font-montserrat">{userInitials}</span>
         </div>
       </div>
     </div>
