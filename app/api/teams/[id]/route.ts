@@ -120,4 +120,53 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       { status: 500 }
     )
   }
+}
+
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+  
+    const teamId = parseInt(params.id)
+    // Sprawdzenie czy użytkownik jest administratorem zespołu
+    const team = await prisma.team.findFirst({
+      where: {
+        id: teamId,
+        members: {
+          some: { userId: session.user.id, role: "admin" },
+        },
+      },
+    })
+  
+    if (!team) {
+      return NextResponse.json(
+        { error: "Nie masz uprawnień do usunięcia tego zespołu lub zespół nie istnieje" },
+        { status: 403 }
+      )
+    }
+  
+    // Usunięcie zespołu
+    await prisma.team.delete({
+      where: { id: teamId },
+    })
+  
+    // Dodanie wpisu o aktywności
+    await prisma.activity.create({
+      data: {
+        type: "delete_team",
+        description: `Usunięto zespół: ${team.name}`,
+        userId: session.user.id,
+      },
+    })
+  
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting team:", error)
+    return NextResponse.json(
+      { error: "Wystąpił błąd podczas usuwania zespołu" },
+      { status: 500 }
+    )
+  }
 } 

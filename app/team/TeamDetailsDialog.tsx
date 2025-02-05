@@ -45,15 +45,18 @@ interface TeamDetailsDialogProps {
   onOpenChange: (open: boolean) => void
   team: Team | null
   onSave: (updatedTeam: Team) => void
+  onTeamDeleted?: () => void
 }
 
-export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDetailsDialogProps) {
+export function TeamDetailsDialog({ open, onOpenChange, team, onSave, onTeamDeleted }: TeamDetailsDialogProps) {
   const { data: session } = useSession()
   const [editedTeam, setEditedTeam] = useState<Team | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<User[]>([])
   const [isLeaving, setIsLeaving] = useState(false)
   const [leaveError, setLeaveError] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const router = useRouter()
 
   // Sprawdź, czy zalogowany użytkownik jest administratorem zespołu
@@ -168,166 +171,193 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
     }
   }
 
+  const handleDeleteTeam = async () => {
+    setDeleteError(null)
+    try {
+      const response = await fetch(`/api/teams/${editedTeam?.id}`, {
+        method: "DELETE",
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Błąd podczas usuwania zespołu")
+      }
+      setIsDeleteDialogOpen(false)
+      onOpenChange(false)
+      
+      // Wywołaj callback odświeżający listę zespołów
+      if (onTeamDeleted) {
+        onTeamDeleted()
+      }
+      
+      router.push("/team")
+      router.refresh()
+    } catch (error) {
+      console.error("Error deleting team:", error)
+      setDeleteError(error instanceof Error ? error.message : "Wystąpił błąd")
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#252422] border-[#403d39] text-[#fffcf2] max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-montserrat">Szczegóły zespołu</DialogTitle>
-          <DialogDescription className="text-[#ccc5b9] font-open-sans">
-            {isAdmin 
-              ? "Edytuj informacje o zespole i zarządzaj jego członkami" 
-              : "Przeglądaj informacje o zespole"}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="bg-[#252422] border-[#403d39] text-[#fffcf2] max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-montserrat">Szczegóły zespołu</DialogTitle>
+            <DialogDescription className="text-[#ccc5b9] font-open-sans">
+              {isAdmin 
+                ? "Edytuj informacje o zespole i zarządzaj jego członkami" 
+                : "Przeglądaj informacje o zespole"}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="grid gap-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="teamName" className="text-lg text-[#fffcf2] font-roboto">
-              Nazwa zespołu
-            </Label>
-            <Input
-              id="teamName"
-              value={editedTeam.name}
-              onChange={(e) => setEditedTeam({ ...editedTeam, name: e.target.value })}
-              className="bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
-              disabled={!isAdmin}
-            />
-          </div>
+          <div className="grid gap-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="teamName" className="text-lg text-[#fffcf2] font-roboto">
+                Nazwa zespołu
+              </Label>
+              <Input
+                id="teamName"
+                value={editedTeam.name}
+                onChange={(e) => setEditedTeam({ ...editedTeam, name: e.target.value })}
+                className="bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
+                disabled={!isAdmin}
+              />
+            </div>
 
-          <div className="space-y-4">
-            <Label className="text-lg text-[#fffcf2] font-roboto">Członkowie zespołu</Label>
-            {editedTeam.members.map((member) => (
-              <div key={member.id} className="flex items-center justify-between bg-[#403d39] p-3 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
-                    <span className="text-sm font-semibold text-[#fffcf2]">
-                      {getUserInitials(member.user.name)}
-                    </span>
+            <div className="space-y-4">
+              <Label className="text-lg text-[#fffcf2] font-roboto">Członkowie zespołu</Label>
+              {editedTeam.members.map((member) => (
+                <div key={member.id} className="flex items-center justify-between bg-[#403d39] p-3 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
+                      <span className="text-sm font-semibold text-[#fffcf2]">
+                        {getUserInitials(member.user.name)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-[#fffcf2]">{member.user.name}</p>
+                      <p className="text-xs text-[#ccc5b9]">{member.user.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-[#fffcf2]">{member.user.name}</p>
-                    <p className="text-xs text-[#ccc5b9]">{member.user.email}</p>
+                  <div className="flex items-center space-x-2">
+                    <Select
+                      value={member.role}
+                      onValueChange={(newRole: "admin" | "member") => {
+                        // Nie pozwalamy na zmianę roli jeśli nie jesteśmy adminem
+                        if (!isAdmin) return
+                        
+                        // Nie pozwalamy na zmianę roli administratora
+                        if (member.role === "admin" && member.user.id === session.user.id) {
+                          return
+                        }
+                        
+                        setEditedTeam(prev => ({
+                          ...prev!,
+                          members: prev!.members.map(m => 
+                            m.id === member.id ? { ...m, role: newRole } : m
+                          )
+                        }))
+                      }}
+                      disabled={!isAdmin || (member.role === "admin" && member.user.id === session.user.id)}
+                    >
+                      <SelectTrigger className="w-[140px] h-8 text-xs bg-[#252422] border-none text-[#ccc5b9]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#252422] border-[#403d39]">
+                        <SelectItem value="admin" className="text-[#fffcf2]">
+                          Administrator
+                        </SelectItem>
+                        <SelectItem value="member" className="text-[#fffcf2]">
+                          Członek
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {member.role !== "admin" && isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="text-[#ccc5b9] hover:text-[#eb5e28]"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Select
-                    value={member.role}
-                    onValueChange={(newRole: "admin" | "member") => {
-                      // Nie pozwalamy na zmianę roli jeśli nie jesteśmy adminem
-                      if (!isAdmin) return
-                      
-                      // Nie pozwalamy na zmianę roli administratora
-                      if (member.role === "admin" && member.user.id === session.user.id) {
-                        return
-                      }
-                      
-                      setEditedTeam(prev => ({
-                        ...prev!,
-                        members: prev!.members.map(m => 
-                          m.id === member.id ? { ...m, role: newRole } : m
-                        )
-                      }))
-                    }}
-                    disabled={!isAdmin || (member.role === "admin" && member.user.id === session.user.id)}
-                  >
-                    <SelectTrigger className="w-[140px] h-8 text-xs bg-[#252422] border-none text-[#ccc5b9]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#252422] border-[#403d39]">
-                      <SelectItem value="admin" className="text-[#fffcf2]">
-                        Administrator
-                      </SelectItem>
-                      <SelectItem value="member" className="text-[#fffcf2]">
-                        Członek
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {member.role !== "admin" && isAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveMember(member.id)}
-                      className="text-[#ccc5b9] hover:text-[#eb5e28]"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+              ))}
+
+              {/* Wyszukiwanie i dodawanie nowych członków - tylko dla administratorów */}
+              {isAdmin && (
+                <div className="space-y-4">
+                  <Label className="text-lg text-[#fffcf2] font-roboto">Dodaj nowego członka</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#ccc5b9]" />
+                    <Input
+                      placeholder="Wyszukaj użytkowników..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
+                    />
+                  </div>
+
+                  {searchQuery.length >= 2 && searchResults.length > 0 && (
+                    <ScrollArea className="h-[200px] rounded-md border border-[#403d39] bg-[#252422] p-4">
+                      <div className="space-y-2">
+                        {searchResults.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center justify-between p-2 rounded-lg hover:bg-[#403d39] cursor-pointer"
+                            onClick={() => handleAddMember(user)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
+                                <span className="text-sm font-semibold text-[#fffcf2]">
+                                  {getUserInitials(user.name)}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#fffcf2]">{user.name}</p>
+                                <p className="text-xs text-[#ccc5b9]">{user.email}</p>
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="sm" className="hover:bg-[#eb5e28]/20 hover:text-[#fffcf2]">
+                              Dodaj
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   )}
                 </div>
-              </div>
-            ))}
-
-            {/* Wyszukiwanie i dodawanie nowych członków - tylko dla administratorów */}
-            {isAdmin && (
-              <div className="space-y-4">
-                <Label className="text-lg text-[#fffcf2] font-roboto">Dodaj nowego członka</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#ccc5b9]" />
-                  <Input
-                    placeholder="Wyszukaj użytkowników..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-[#403d39] border-2 border-[#403d39] text-[#fffcf2] placeholder:text-[#ccc5b9]/50 focus:border-[#eb5e28] transition-colors"
-                  />
-                </div>
-
-                {searchQuery.length >= 2 && searchResults.length > 0 && (
-                  <ScrollArea className="h-[200px] rounded-md border border-[#403d39] bg-[#252422] p-4">
-                    <div className="space-y-2">
-                      {searchResults.map((user) => (
-                        <div
-                          key={user.id}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-[#403d39] cursor-pointer"
-                          onClick={() => handleAddMember(user)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-[#eb5e28] flex items-center justify-center">
-                              <span className="text-sm font-semibold text-[#fffcf2]">
-                                {getUserInitials(user.name)}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-[#fffcf2]">{user.name}</p>
-                              <p className="text-xs text-[#ccc5b9]">{user.email}</p>
-                            </div>
-                          </div>
-                          <Button variant="ghost" size="sm" className="hover:bg-[#eb5e28]/20 hover:text-[#fffcf2]">
-                            Dodaj
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          {leaveError && (
-            <p className="text-red-500 text-sm mb-2 w-full text-center">
-              {leaveError}
-            </p>
-          )}
-          <div className="flex justify-between w-full">
-            <Button
-              variant="outline"
-              onClick={handleLeaveTeam}
-              disabled={isLeaving}
-              className="border-2 border-[#eb5e28] text-[#eb5e28] hover:bg-[#eb5e28]/10 hover:text-[#eb5e28] transition-colors"
-            >
-              {isLeaving ? (
-                <>
-                  <span className="mr-2">Opuszczanie</span>
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </>
-              ) : (
-                "Opuść zespół"
               )}
-            </Button>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row w-full gap-4">
+            {leaveError && (
+              <p className="text-red-500 text-sm mb-2 w-full text-center">
+                {leaveError}
+              </p>
+            )}
+            <div className="flex gap-2 sm:mr-auto">
+              <Button
+                variant="outline"
+                onClick={handleLeaveTeam}
+                disabled={isLeaving}
+                className="border-2 border-[#eb5e28] text-[#eb5e28] hover:bg-[#eb5e28]/10 hover:text-[#eb5e28] transition-colors"
+              >
+                {isLeaving ? "Opuszczanie" : "Opuść zespół"}
+              </Button>
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  Usuń zespół
+                </Button>
+              )}
+            </div>
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -342,10 +372,39 @@ export function TeamDetailsDialog({ open, onOpenChange, team, onSave }: TeamDeta
                 </Button>
               )}
             </div>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-[#252422] border-[#403d39] text-[#fffcf2] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-montserrat">Potwierdź usunięcie zespołu</DialogTitle>
+            <DialogDescription className="text-[#ccc5b9] font-open-sans">
+              Czy na pewno chcesz usunąć zespół? Ta akcja jest nieodwracalna.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <p className="text-red-500 text-sm mt-2">{deleteError}</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="border-2 hover:bg-[#403d39] hover:text-[#fffcf2] text-[#8a8580]"
+            >
+              Anuluj
+            </Button>
+            <Button
+              onClick={handleDeleteTeam}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Usuń zespół
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

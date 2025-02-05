@@ -75,6 +75,12 @@ export default function TeamPage() {
     }
   }
 
+  const handleTeamDeleted = async () => {
+    await fetchTeams()
+    setSelectedTeam(null)
+    setIsTeamDetailsOpen(false)
+  }
+
   if (status === "loading") {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
@@ -219,6 +225,7 @@ export default function TeamPage() {
         onOpenChange={setIsTeamDetailsOpen}
         team={selectedTeam}
         onSave={handleSaveTeam}
+        onTeamDeleted={handleTeamDeleted}
       />
     </Layout>
   )
