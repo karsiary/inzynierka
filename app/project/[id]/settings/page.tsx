@@ -84,6 +84,7 @@ export default function ProjectSettingsPage() {
   const [songToDelete, setSongToDelete] = useState<number | null>(null)
   const [isDeletingSong, setIsDeletingSong] = useState(false)
   const [deleteSongError, setDeleteSongError] = useState<string | null>(null)
+  const [isDeleteProjectDialogOpen, setIsDeleteProjectDialogOpen] = useState(false)
 
   useEffect(() => {
     fetchProject()
@@ -349,26 +350,26 @@ export default function ProjectSettingsPage() {
   }
 
   const handleDeleteProject = async () => {
-    if (!isCurrentUserAdmin) return
-
     try {
       setIsDeleting(true)
       setDeleteError(null)
 
       const response = await fetch(`/api/projects/${projectId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
 
       if (!response.ok) {
         throw new Error('Błąd podczas usuwania projektu')
       }
 
+      // Przekieruj do dashboardu po usunięciu
       router.push('/dashboard')
     } catch (error) {
       console.error("Error deleting project:", error)
-      setDeleteError(error instanceof Error ? error.message : "Wystąpił błąd podczas usuwania projektu")
+      setDeleteError('Wystąpił błąd podczas usuwania projektu')
     } finally {
       setIsDeleting(false)
+      setIsDeleteProjectDialogOpen(false)
     }
   }
 
@@ -377,22 +378,28 @@ export default function ProjectSettingsPage() {
       setIsDeletingSong(true)
       setDeleteSongError(null)
 
+      // Sprawdzenie liczby piosenek w projekcie
+      if (project?.songs && project.songs.length === 1) {
+        // Jeśli to ostatnia piosenka, otwórz modal potwierdzenia usunięcia projektu
+        setIsDeleteProjectDialogOpen(true)
+        return
+      }
+
       const response = await fetch(`/api/projects/${projectId}/songs/${songId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Błąd podczas usuwania piosenki')
+        throw new Error('Błąd podczas usuwania piosenki')
       }
 
-      // Odśwież projekt po usunięciu piosenki
-      await fetchProject()
+      // Zamknij modal i odśwież projekt
       setIsDeleteSongDialogOpen(false)
       setSongToDelete(null)
+      await fetchProject()
     } catch (error) {
       console.error("Error deleting song:", error)
-      setDeleteSongError(error.message || 'Wystąpił błąd podczas usuwania piosenki')
+      setDeleteSongError('Wystąpił błąd podczas usuwania piosenki')
     } finally {
       setIsDeletingSong(false)
     }
@@ -654,20 +661,6 @@ export default function ProjectSettingsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Select
-                        value={song.phase}
-                        onValueChange={(value) => handleSongPhaseChange(song.id, value)}
-                      >
-                        <SelectTrigger className="w-[100px] bg-[#403d39] border-[#403d39] text-[#fffcf2] h-8 text-sm mr-6">
-                          <SelectValue placeholder="Faza" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#252422] border-[#403d39]">
-                          <SelectItem value="1" className="text-[#fffcf2]">Faza 1</SelectItem>
-                          <SelectItem value="2" className="text-[#fffcf2]">Faza 2</SelectItem>
-                          <SelectItem value="3" className="text-[#fffcf2]">Faza 3</SelectItem>
-                          <SelectItem value="4" className="text-[#fffcf2]">Faza 4</SelectItem>
-                        </SelectContent>
-                      </Select>
                       <Button
                         variant="destructive"
                         size="icon"
@@ -847,6 +840,38 @@ export default function ProjectSettingsPage() {
               disabled={isDeletingSong}
             >
               {isDeletingSong ? "Usuwanie..." : "Usuń"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteProjectDialogOpen} onOpenChange={setIsDeleteProjectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Usuń projekt</DialogTitle>
+            <DialogDescription>
+              Usunięcie ostatniej piosenki spowoduje trwałe usunięcie projektu. Czy na pewno chcesz kontynuować?
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <p className="text-sm font-medium text-destructive">{deleteError}</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteProjectDialogOpen(false)
+                setSongToDelete(null)
+              }}
+            >
+              Anuluj
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProject}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Usuwanie..." : "Usuń projekt"}
             </Button>
           </DialogFooter>
         </DialogContent>
