@@ -1,0 +1,21 @@
+name: Deploy to Droplet
+
+on:
+  push:
+    branches: [ "master" ] # Gałąź, na push której ma reagować workflow
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to Droplet
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }} # Klucz prywatny SSH dodany jako secret w GitHub
+          port: 22
+          script: |
+            /root/deploy.sh # Ścieżka do deploy.sh w katalogu domowym root
