@@ -191,7 +191,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Chart */}
           <Card className="lg:col-span-2 bg-[#403d39] border-none p-5 pb-2 select-none">
-            <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 font-montserrat">Aktywność Projektowa</h3>
+            <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 font-montserrat">Wykres Aktywności</h3>
             <div className="h-[274px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={activityData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
                       borderRadius: "8px",
                     }}
                     labelStyle={{ color: "#fffcf2" }}
-                    formatter={(value, name) => [`${value} ${name === "projekty" ? "projektów" : name}`, ""]}
+                    formatter={(value, name) => [`${value} ${name === "projekty" ? "aktywności" : name}`, ""]}
                     labelFormatter={(label) =>
                       `${label}, ${format(activityData.find((d) => d.name === label)?.date || new Date(), "d MMM", { locale: pl })}`
                     }

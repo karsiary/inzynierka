@@ -283,10 +283,10 @@ export async function GET(req: Request) {
         }))
 
         activities.forEach((activity) => {
-          const itemDate = new Date(activity.created_at)
-          const dayIndex = itemDate.getDay()
-          activityByDay[dayIndex].projekty += activity.type === "create_project" ? 1 : 0
-        })
+          const itemDate = new Date(activity.created_at);
+          const dayIndex = itemDate.getDay();
+          activityByDay[dayIndex].projekty += 1;
+        });
 
         return activityByDay
       })()
