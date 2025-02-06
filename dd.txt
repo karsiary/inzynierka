@@ -15,4 +15,4 @@
     # Restartuj usługę aplikacji (dostosuj komendę do sposobu uruchamiania aplikacji)
     pm2 restart inzynierka # Jeśli używasz PM2
     # systemctl restart your-app-service.service # Jeśli używasz systemd
-    # service your-app-service restart # Jeśli używasz service
+    # service your-app-service restart # Jeśli używasz servicea asdasd
