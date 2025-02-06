@@ -51,17 +51,19 @@ export default function PricingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="relative group"
+              className="relative group h-full"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-[#2a9d8f]/20 to-[#2a9d8f]/10 rounded-2xl blur-xl transition-all duration-300 group-hover:blur-2xl" />
-              <div className="relative bg-[#403d39]/50 backdrop-blur-sm border border-[#2a9d8f]/30 rounded-2xl p-8 transition-transform duration-300 hover:translate-y-[-4px]">
-                <h3 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">Standard</h3>
-                <p className="text-[#ccc5b9] mb-6 font-open-sans">Idealne dla małych zespołów muzycznych</p>
-                <div className="flex items-baseline mb-8">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[98%] h-[98%] bg-gradient-to-r from-[#2a9d8f]/20 via-[#2a9d8f]/15 to-[#2a9d8f]/10 rounded-2xl blur-[8px] transition-all duration-300 group-hover:blur-xl" />
+              <div className="relative bg-[#403d39]/50 backdrop-blur-sm border border-[#2a9d8f]/30 rounded-2xl p-8 transition-transform duration-300 hover:translate-y-[-4px] h-full flex flex-col">
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">Standard</h3>
+                  <p className="text-[#ccc5b9] font-open-sans h-12">Idealne dla małych zespołów muzycznych</p>
+                </div>
+                <div className="flex items-baseline mb-6">
                   <span className="text-4xl font-bold text-[#fffcf2] font-montserrat">29</span>
                   <span className="text-xl text-[#ccc5b9] ml-2 font-open-sans">PLN/mies.</span>
                 </div>
-                <Button className="w-full mb-8 bg-[#2a9d8f] hover:bg-[#2a9d8f]/90 text-white rounded-full font-roboto">
+                <Button className="w-full bg-[#2a9d8f] hover:bg-[#2a9d8f]/90 text-white rounded-full font-roboto py-6 mb-8">
                   Wybierz plan
                 </Button>
                 <ul className="space-y-4">
@@ -76,22 +78,24 @@ export default function PricingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="relative group"
+              className="relative group h-full"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-[#eb5e28]/20 to-[#eb5e28]/10 rounded-2xl blur-xl transition-all duration-300 group-hover:blur-2xl" />
-              <div className="relative bg-[#403d39]/50 backdrop-blur-sm border border-[#eb5e28]/30 rounded-2xl p-8 transition-transform duration-300 hover:translate-y-[-4px]">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[98%] h-[98%] bg-gradient-to-r from-[#eb5e28]/20 via-[#eb5e28]/15 to-[#eb5e28]/10 rounded-2xl blur-[8px] transition-all duration-300 group-hover:blur-xl" />
+              <div className="relative bg-[#403d39]/50 backdrop-blur-sm border border-[#eb5e28]/30 rounded-2xl p-8 transition-transform duration-300 hover:translate-y-[-4px] h-full flex flex-col">
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <span className="bg-[#eb5e28] text-white px-4 py-1 rounded-full text-sm font-medium font-roboto">
                     Najpopularniejszy
                   </span>
                 </div>
-                <h3 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">Professional</h3>
-                <p className="text-[#ccc5b9] mb-6 font-open-sans">Dla profesjonalnych studiów nagrań</p>
-                <div className="flex items-baseline mb-8">
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">Professional</h3>
+                  <p className="text-[#ccc5b9] font-open-sans h-12">Dla profesjonalnych studiów nagrań</p>
+                </div>
+                <div className="flex items-baseline mb-6">
                   <span className="text-4xl font-bold text-[#fffcf2] font-montserrat">100</span>
                   <span className="text-xl text-[#ccc5b9] ml-2 font-open-sans">PLN/mies.</span>
                 </div>
-                <Button className="w-full mb-8 bg-[#eb5e28] hover:bg-[#eb5e28]/90 text-white rounded-full font-roboto">
+                <Button className="w-full bg-[#eb5e28] hover:bg-[#eb5e28]/90 text-white rounded-full font-roboto py-6 mb-8">
                   Wybierz plan
                 </Button>
                 <ul className="space-y-4">
@@ -110,18 +114,20 @@ export default function PricingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="relative group"
+              className="relative group h-full"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-[#8338ec]/20 to-[#8338ec]/10 rounded-2xl blur-xl transition-all duration-300 group-hover:blur-2xl" />
-              <div className="relative bg-[#403d39]/50 backdrop-blur-sm border border-[#8338ec]/30 rounded-2xl p-8 transition-transform duration-300 hover:translate-y-[-4px]">
-                <h3 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">Enterprise</h3>
-                <p className="text-[#ccc5b9] mb-6 font-open-sans">Dedykowane rozwiązania dla dużych wytwórni</p>
-                <div className="flex items-baseline mb-8">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[98%] h-[98%] bg-gradient-to-r from-[#8338ec]/20 via-[#8338ec]/15 to-[#8338ec]/10 rounded-2xl blur-[8px] transition-all duration-300 group-hover:blur-xl" />
+              <div className="relative bg-[#403d39]/50 backdrop-blur-sm border border-[#8338ec]/30 rounded-2xl p-8 transition-transform duration-300 hover:translate-y-[-4px] h-full flex flex-col">
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-[#fffcf2] mb-2 font-montserrat">Enterprise</h3>
+                  <p className="text-[#ccc5b9] font-open-sans h-12">Dedykowane rozwiązania dla dużych wytwórni</p>
+                </div>
+                <div className="flex items-baseline mb-6">
                   <span className="text-2xl text-[#fffcf2] font-montserrat">Skontaktuj się</span>
                 </div>
                 <Button
                   variant="outline"
-                  className="border-2 border-[#403d39] text-[#ccc5b9] hover:text-[#fffcf2] hover:bg-[#403d39] rounded-full px-8 py-6 text-lg transition-all duration-300 font-roboto"
+                  className="w-full border-2 border-[#403d39] text-[#ccc5b9] hover:text-[#fffcf2] hover:bg-[#403d39] rounded-full font-roboto py-6 mb-8"
                 >
                   Skontaktuj się z nami
                 </Button>
@@ -135,20 +141,6 @@ export default function PricingPage() {
                 </ul>
               </div>
             </motion.div>
-          </div>
-
-          {/* FAQ Section */}
-          <div className="mt-24 text-center">
-            <h2 className="text-3xl font-bold text-[#fffcf2] mb-4 font-montserrat">Masz pytania?</h2>
-            <p className="text-[#ccc5b9] mb-8 font-open-sans">
-              Nasz zespół jest dostępny 24/7, aby pomóc Ci wybrać najlepsze rozwiązanie
-            </p>
-            <Button
-              variant="outline"
-              className="border-2 border-[#403d39] text-[#ccc5b9] hover:text-[#fffcf2] hover:bg-[#403d39] rounded-full px-8 py-6 text-lg transition-all duration-300 font-roboto"
-            >
-              Sprawdź FAQ
-            </Button>
           </div>
         </main>
       </div>
