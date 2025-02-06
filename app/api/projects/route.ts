@@ -8,6 +8,8 @@ import { NotificationType } from "@prisma/client"
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions)
+    const { searchParams } = new URL(req.url)
+    const query = searchParams.get("query")?.trim() || ""
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -16,53 +18,180 @@ export async function GET(req: Request) {
       )
     }
 
-    const projects = await prisma.project.findMany({
-      where: {
-        members: {
-          some: {
-            userId: session.user.id,
-          },
+    const userId = session.user.id
+
+    const searchCondition = query ? {
+      OR: [
+        { name: { contains: query } },
+        { description: { contains: query } }
+      ]
+    } : {}
+
+    const [myProjects, teamProjects, memberProjects] = await Promise.all([
+      // Projekty, których jestem właścicielem
+      prisma.project.findMany({
+        where: {
+          AND: [
+            { userId },
+            searchCondition
+          ]
         },
-      },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
           },
-        },
-        teams: {
-          include: {
-            team: {
-              include: {
-                members: true
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  image: true
+                }
               }
-            },
+            }
           },
-        },
-        songs: {
-          include: {
-            authors: {
-              include: {
-                user: true,
-                team: true
+          teams: {
+            include: {
+              team: {
+                include: {
+                  members: true
+                }
+              }
+            }
+          },
+          songs: {
+            include: {
+              authors: {
+                include: {
+                  user: true,
+                  team: true
+                }
               }
             }
           }
         },
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-    })
+        orderBy: { created_at: 'desc' }
+      }),
 
-    return NextResponse.json(projects)
+      // Projekty zespołów, w których jestem
+      prisma.project.findMany({
+        where: {
+          AND: [
+            { userId: { not: userId } },
+            { teams: { some: { team: { members: { some: { userId } } } } } },
+            searchCondition
+          ]
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          },
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  image: true
+                }
+              }
+            }
+          },
+          teams: {
+            include: {
+              team: {
+                include: {
+                  members: true
+                }
+              }
+            }
+          },
+          songs: {
+            include: {
+              authors: {
+                include: {
+                  user: true,
+                  team: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      }),
+
+      // Projekty, w których jestem członkiem
+      prisma.project.findMany({
+        where: {
+          AND: [
+            { userId: { not: userId } },
+            { members: { some: { userId } } },
+            { teams: { none: { team: { members: { some: { userId } } } } } },
+            searchCondition
+          ]
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          },
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  image: true
+                }
+              }
+            }
+          },
+          teams: {
+            include: {
+              team: {
+                include: {
+                  members: true
+                }
+              }
+            }
+          },
+          songs: {
+            include: {
+              authors: {
+                include: {
+                  user: true,
+                  team: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      })
+    ])
+
+    // Łączymy wszystkie projekty
+    const allProjects = [...myProjects, ...teamProjects, ...memberProjects]
+
+    return NextResponse.json(allProjects)
   } catch (error) {
     console.error("Error fetching projects:", error)
     return NextResponse.json(

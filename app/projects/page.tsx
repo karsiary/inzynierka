@@ -29,9 +29,20 @@ import { Layout } from "@/components/Layout"
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [error, setError] = useState<string | null>(null)
   const pathname = usePathname()
   const router = useRouter()
   const { data: session, status } = useSession()
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -39,12 +50,19 @@ export default function ProjectsPage() {
     } else if (status === "unauthenticated") {
       router.push("/login")
     }
-  }, [status])
+  }, [status, debouncedSearchQuery])
 
   async function fetchProjects() {
     try {
       setLoading(true)
-      const response = await fetch(`/api/projects?userId=${session?.user?.id}`)
+      setError(null)
+      const queryParams = new URLSearchParams()
+      
+      if (debouncedSearchQuery) {
+        queryParams.append("query", debouncedSearchQuery)
+      }
+
+      const response = await fetch(`/api/projects?${queryParams.toString()}`)
       
       if (!response.ok) {
         throw new Error("Błąd podczas pobierania projektów")
@@ -54,6 +72,7 @@ export default function ProjectsPage() {
       setProjects(data)
     } catch (error) {
       console.error("Error fetching projects:", error)
+      setError("Wystąpił błąd podczas pobierania projektów")
     } finally {
       setLoading(false)
     }
@@ -95,6 +114,8 @@ export default function ProjectsPage() {
                 <Input
                   placeholder="Szukaj projektów..."
                   className="pl-10 bg-[#252422] border-none text-white placeholder:text-[#ccc5b9]/50 font-open-sans"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Select>
@@ -113,31 +134,6 @@ export default function ProjectsPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <Select>
-                <SelectTrigger className="w-[180px] bg-[#252422] border-none font-open-sans text-white">
-                  <SelectValue placeholder="Faza" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#252422] border-[#403d39]">
-                  <SelectItem value="all" className="font-open-sans text-white">
-                    Wszystkie
-                  </SelectItem>
-                  <SelectItem value="planning" className="font-open-sans text-white">
-                    Planowanie
-                  </SelectItem>
-                  <SelectItem value="pre" className="font-open-sans text-white">
-                    Preprodukcja
-                  </SelectItem>
-                  <SelectItem value="prod" className="font-open-sans text-white">
-                    Produkcja
-                  </SelectItem>
-                  <SelectItem value="post" className="font-open-sans text-white">
-                    Postprodukcja
-                  </SelectItem>
-                  <SelectItem value="master" className="font-open-sans text-white">
-                    Mastering
-                  </SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </Card>
@@ -147,8 +143,12 @@ export default function ProjectsPage() {
           <div className="grid divide-y divide-[#252422]">
             {loading ? (
               <div className="p-6 text-center text-[#ccc5b9]">Ładowanie projektów...</div>
+            ) : error ? (
+              <div className="p-6 text-center text-red-500">{error}</div>
             ) : projects.length === 0 ? (
-              <div className="p-6 text-center text-[#ccc5b9]">Brak projektów do wyświetlenia.</div>
+              <div className="p-6 text-center text-[#ccc5b9]">
+                {searchQuery ? "Nie znaleziono projektów spełniających kryteria wyszukiwania." : "Brak projektów do wyświetlenia."}
+              </div>
             ) : (
               projects.map((project) => (
                 <Link
@@ -193,13 +193,10 @@ export default function ProjectsPage() {
 
                     {/* Phase & Due Date */}
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm text-[#ccc5b9]">Faza: {project.phase}</span>
-                      </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-[#ccc5b9]" />
                         <span className="text-sm text-[#ccc5b9]">
-                          Termin: {project.due_date ? new Date(project.due_date).toLocaleDateString() : "Brak"}
+                          Termin: {project.endDate ? new Date(project.endDate).toLocaleDateString() : "Brak"}
                         </span>
                       </div>
                     </div>
