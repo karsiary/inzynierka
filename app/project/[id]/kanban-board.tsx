@@ -240,6 +240,11 @@ export function KanbanBoard({ projectId, phaseId, selectedSong, completedSongs, 
             if (!response.ok) {
                 throw new Error('Błąd podczas aktualizacji statusu zadania');
             }
+
+            const data = await response.json();
+            if (data.shouldRefreshStats) {
+                window.dispatchEvent(new Event('taskUpdated'));
+            }
         } catch (error) {
             console.error("Error updating task status:", error);
             setError("Nie udało się zaktualizować statusu zadania. Spróbuj ponownie.");

@@ -124,7 +124,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       }
     })
 
-    return NextResponse.json(updatedTask)
+    return NextResponse.json({ ...updatedTask, shouldRefreshStats: true })
   } catch (error) {
     console.error("Error updating task:", error)
     return NextResponse.json(

@@ -1,10 +1,7 @@
 import { Card } from "@/components/ui/card"
 import { Calendar, DollarSign, Clock } from "lucide-react"
 import { useEffect, useState } from "react"
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(amount)
-}
+import { formatCurrency } from "@/lib/utils"
 
 interface Project {
   id: number
@@ -27,6 +24,20 @@ interface ProjectStatsProps {
 
 export function ProjectStats({ project, currentPhase, selectedSong }: ProjectStatsProps) {
   const [remainingDays, setRemainingDays] = useState<string | number>("...")
+  const [totalActualBudget, setTotalActualBudget] = useState<number>(0)
+
+  const fetchTotalActualBudget = async () => {
+    try {
+      const response = await fetch(`/api/projects/${project.id}/actual-budget`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch total actual budget')
+      }
+      const data = await response.json()
+      setTotalActualBudget(data.totalActualBudget)
+    } catch (error) {
+      console.error('Error fetching total actual budget:', error)
+    }
+  }
 
   useEffect(() => {
     const fetchRemainingDays = async () => {
@@ -44,7 +55,20 @@ export function ProjectStats({ project, currentPhase, selectedSong }: ProjectSta
     }
 
     fetchRemainingDays()
+    fetchTotalActualBudget()
   }, [project.id])
+
+  // Nasłuchuj na zdarzenie aktualizacji zadania
+  useEffect(() => {
+    const handleTaskUpdate = () => {
+      fetchTotalActualBudget()
+    }
+
+    window.addEventListener('taskUpdated', handleTaskUpdate)
+    return () => {
+      window.removeEventListener('taskUpdated', handleTaskUpdate)
+    }
+  }, [])
 
   console.log("ProjectStats - dane projektu:", {
     budgetType: project.budgetType,
@@ -58,24 +82,12 @@ export function ProjectStats({ project, currentPhase, selectedSong }: ProjectSta
         <Card className="bg-[#403d39] border-none p-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg bg-[#eb5e28]/10 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-[#eb5e28]" />
+              <DollarSign className="w-6 h-6 text-[#eb5e28]" />
             </div>
             <div>
-              <p className="text-[#ccc5b9] text-sm font-open-sans">
-                {selectedSong !== "all" ? "Faza piosenki" : "Faza projektu"}
-              </p>
+              <p className="text-[#ccc5b9] text-sm font-open-sans">Budżet wykorzystany</p>
               <h3 className="text-xl font-bold text-[#fffcf2] font-montserrat">
-                {currentPhase === "Zakończona"
-                  ? "Zakończona"
-                  : currentPhase === "1"
-                    ? "Preprodukcja"
-                    : currentPhase === "2"
-                      ? "Produkcja"
-                      : currentPhase === "3"
-                        ? "Inżynieria"
-                        : currentPhase === "4"
-                          ? "Publishing"
-                          : "Nieznana"}
+                {formatCurrency(totalActualBudget)}
               </h3>
             </div>
           </div>

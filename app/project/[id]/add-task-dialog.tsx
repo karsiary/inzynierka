@@ -33,66 +33,40 @@ export function AddTaskDialog({
   console.log("AddTaskDialog - otrzymane piosenki:", songs)
   console.log("AddTaskDialog - wybrany song:", selectedSong)
 
-  const handleSubmit = async (taskData: any) => {
-    setError(null)
-
+  const handleSubmit = async (values: any) => {
     try {
-      const songId = taskData.song_id || selectedSong
-      const newTask = {
-        ...taskData,
-        project_id: parseInt(projectId),
-        phase_id: phaseId,
-        status: taskToEdit ? taskToEdit.status : currentColumn,
-        song_id: songId === 'all' ? null : parseInt(songId),
-        start_date: taskData.start_date || null,
-        end_date: taskData.end_date || null,
-        due_date: taskData.due_date || null,
-        // Only include budget fields if they have values
-        ...(taskData.planned_budget ? { planned_budget: parseFloat(taskData.planned_budget) } : {}),
-        ...(taskData.actual_budget ? { actual_budget: parseFloat(taskData.actual_budget) } : {}),
+      const endpoint = taskToEdit ? `/api/tasks/${taskToEdit.id}` : '/api/tasks'
+      const method = taskToEdit ? 'PUT' : 'POST'
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...values,
+          project_id: projectId,
+          phase_id: phaseId,
+          song_id: selectedSong === 'all' ? null : selectedSong,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Błąd podczas zapisywania zadania')
       }
 
-      console.log("Dane zadania do wysłania:", newTask)
+      const data = await response.json()
+      if (data.shouldRefreshStats) {
+        window.dispatchEvent(new Event('taskUpdated'))
+      }
 
-      if (taskToEdit) {
-        const response = await fetch(`/api/tasks/${taskToEdit.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(newTask),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Błąd podczas aktualizacji zadania')
-        }
-
-        const updatedTask = await response.json()
-        onTaskAdded(updatedTask)
-        onOpenChange(false)
-      } else {
-        const response = await fetch('/api/tasks', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(newTask),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Błąd podczas tworzenia zadania')
-        }
-
-        const createdTask = await response.json()
-
-        onTaskAdded(createdTask)
-        onOpenChange(false)
+      onOpenChange(false)
+      if (onTaskAdded) {
+        onTaskAdded()
       }
     } catch (error) {
-      console.error("Error:", error)
-      setError(error.message)
+      console.error('Error saving task:', error)
+      setError('Wystąpił błąd podczas zapisywania zadania')
     }
   }
 
