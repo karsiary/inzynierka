@@ -31,6 +31,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [error, setError] = useState<string | null>(null)
   const pathname = usePathname()
   const router = useRouter()
@@ -50,7 +51,7 @@ export default function ProjectsPage() {
     } else if (status === "unauthenticated") {
       router.push("/login")
     }
-  }, [status, debouncedSearchQuery])
+  }, [status, debouncedSearchQuery, statusFilter])
 
   async function fetchProjects() {
     try {
@@ -60,6 +61,9 @@ export default function ProjectsPage() {
       
       if (debouncedSearchQuery) {
         queryParams.append("query", debouncedSearchQuery)
+      }
+      if (statusFilter && statusFilter !== "all") {
+        queryParams.append("status", statusFilter)
       }
 
       const response = await fetch(`/api/projects?${queryParams.toString()}`)
@@ -118,7 +122,7 @@ export default function ProjectsPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px] bg-[#252422] border-none font-open-sans text-white">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>

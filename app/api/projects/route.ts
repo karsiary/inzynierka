@@ -10,6 +10,7 @@ export async function GET(req: Request) {
     const session = await getServerSession(authOptions)
     const { searchParams } = new URL(req.url)
     const query = searchParams.get("query")?.trim() || ""
+    const statusFilter = searchParams.get("status")
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -27,13 +28,19 @@ export async function GET(req: Request) {
       ]
     } : {}
 
+    const statusCondition = statusFilter ? {
+      ...(statusFilter === "active" ? { progress: { lt: 100 } } : {}),
+      ...(statusFilter === "completed" ? { progress: 100 } : {})
+    } : {}
+
     const [myProjects, teamProjects, memberProjects] = await Promise.all([
       // Projekty, których jestem właścicielem
       prisma.project.findMany({
         where: {
           AND: [
             { userId },
-            searchCondition
+            searchCondition,
+            statusCondition
           ]
         },
         include: {
@@ -86,7 +93,8 @@ export async function GET(req: Request) {
           AND: [
             { userId: { not: userId } },
             { teams: { some: { team: { members: { some: { userId } } } } } },
-            searchCondition
+            searchCondition,
+            statusCondition
           ]
         },
         include: {
@@ -140,7 +148,8 @@ export async function GET(req: Request) {
             { userId: { not: userId } },
             { members: { some: { userId } } },
             { teams: { none: { team: { members: { some: { userId } } } } } },
-            searchCondition
+            searchCondition,
+            statusCondition
           ]
         },
         include: {
