@@ -39,7 +39,11 @@ export async function GET(req: Request) {
         },
         teams: {
           include: {
-            team: true,
+            team: {
+              include: {
+                members: true
+              }
+            },
           },
         },
         songs: {
@@ -162,7 +166,11 @@ export async function POST(req: Request) {
         },
         teams: {
           include: {
-            team: true,
+            team: {
+              include: {
+                members: true
+              }
+            },
           },
         },
         songs: {
@@ -206,6 +214,31 @@ export async function POST(req: Request) {
         )
 
       await Promise.all(notificationPromises)
+    }
+
+    // Wyślij powiadomienia do członków zespołów (oprócz twórcy)
+    if (project.teams?.length > 0) {
+      const teamNotificationPromises = project.teams.map(async (teamItem: any) => {
+        if (teamItem.team && teamItem.team.members?.length > 0) {
+          return Promise.all(
+            teamItem.team.members
+              .filter((member: any) => member.userId !== session.user.id)
+              .map((member: any) =>
+                prisma.notification.create({
+                  data: {
+                    userId: member.userId,
+                    type: NotificationType.PROJECT_INVITE,
+                    title: "Zespół przypisany do projektu",
+                    message: `Twój zespół ${teamItem.team.name} został dodany do projektu ${project.name} przez ${creatorName}.`,
+                    targetId: String(project.id),
+                    actionUrl: getProjectUrl(String(project.id)),
+                  },
+                })
+              )
+          );
+        }
+      });
+      await Promise.all(teamNotificationPromises);
     }
 
     return NextResponse.json(project)
