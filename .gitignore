@@ -62,7 +62,10 @@ credentials.json
    
 # cursor rules
 .cursorrules
+
+# database
 .db
+dev.db
 
 
 
