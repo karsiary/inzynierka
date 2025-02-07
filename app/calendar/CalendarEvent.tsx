@@ -17,22 +17,20 @@ interface CalendarEventProps {
     projectTitle?: string
   }
   isVisible?: boolean
-  onClick?: () => void
 }
 
-export function CalendarEvent({ event, isVisible = true, onClick }: CalendarEventProps) {
+export function CalendarEvent({ event, isVisible = true }: CalendarEventProps) {
   const Icon = event.icon
 
   return (
     <div
-      className={`p-2 rounded-lg cursor-pointer transition-all hover:shadow-lg ${
+      className={`p-2 rounded-lg transition-all hover:shadow-lg ${
         isVisible ? "" : "opacity-0 pointer-events-none"
       }`}
       style={{
         backgroundColor: `${event.color}40`,
         borderLeft: `3px solid ${event.color}`,
       }}
-      onClick={onClick}
     >
       <div className="flex items-start gap-2">
         <Icon className="w-4 h-4 shrink-0" style={{ color: event.color }} />
