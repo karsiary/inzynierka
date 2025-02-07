@@ -85,7 +85,7 @@ export default function SettingsPage() {
         setPasswordError(data.error || "Wystąpił błąd podczas zmiany hasła");
         return;
       }
-      signOut();
+      signOut({ callbackUrl: "/" });
     } catch (error: any) {
       console.error("Błąd zmiany hasła:", error);
       setPasswordError("Wystąpił błąd podczas zmiany hasła");
@@ -110,7 +110,7 @@ export default function SettingsPage() {
         return;
       }
 
-      signOut();
+      signOut({ callbackUrl: "/" });
     } catch (error) {
       console.error("Błąd podczas usuwania konta:", error);
     }
