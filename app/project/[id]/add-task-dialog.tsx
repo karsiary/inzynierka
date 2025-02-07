@@ -47,7 +47,7 @@ export function AddTaskDialog({
           ...values,
           project_id: projectId,
           phase_id: phaseId,
-          song_id: selectedSong === 'all' ? null : selectedSong,
+          song_id: taskToEdit ? values.song_id : (selectedSong === 'all' ? null : selectedSong),
         }),
       })
 
