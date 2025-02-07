@@ -23,6 +23,8 @@ export default function TeamPage() {
   const [isTeamDetailsOpen, setIsTeamDetailsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -32,12 +34,19 @@ export default function TeamPage() {
   const openTeamId = searchParams.get("openTeam")
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  useEffect(() => {
     if (status === "authenticated") {
       fetchTeams()
     } else if (status === "unauthenticated") {
       router.push("/login")
     }
-  }, [status])
+  }, [status, debouncedSearchQuery])
 
   useEffect(() => {
     if (openTeamId && teams.length > 0) {
@@ -59,7 +68,10 @@ export default function TeamPage() {
   const fetchTeams = async () => {
     try {
       setError(null)
-      const response = await fetch("/api/teams")
+      const url = debouncedSearchQuery
+        ? `/api/teams/search?q=${encodeURIComponent(debouncedSearchQuery)}`
+        : "/api/teams"
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error("Błąd podczas pobierania zespołów")
       }
@@ -142,26 +154,12 @@ export default function TeamPage() {
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#ccc5b9]" />
                 <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Szukaj zespołów..."
                   className="pl-10 bg-[#252422] border-none text-[#ccc5b9] placeholder:text-[#ccc5b9]/50"
                 />
               </div>
-              <Select>
-                <SelectTrigger className="w-[180px] bg-[#252422] border-none text-white">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#252422] border-[#403d39]">
-                  <SelectItem value="all" className="text-white">
-                    Wszystkie
-                  </SelectItem>
-                  <SelectItem value="active" className="text-white">
-                    Aktywne
-                  </SelectItem>
-                  <SelectItem value="archived" className="text-white">
-                    Zarchiwizowane
-                  </SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <Button
               onClick={() => setIsAddTeamOpen(true)}
