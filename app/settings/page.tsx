@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { Users2, Lock } from "lucide-react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -22,6 +22,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [passwordError, setPasswordError] = useState("")
   const [user, setUser] = useState<any>(null)
   const [blobLeft, setBlobLeft] = useState(0)
   const [blobWidth, setBlobWidth] = useState(0)
@@ -63,8 +67,30 @@ export default function SettingsPage() {
   }
 
   const handlePasswordChange = async () => {
-    // Implementation for password change
-  }
+    setPasswordError("");
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Hasła się nie zgadzają");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setPasswordError(data.error || "Wystąpił błąd podczas zmiany hasła");
+        return;
+      }
+      signOut();
+    } catch (error: any) {
+      console.error("Błąd zmiany hasła:", error);
+      setPasswordError("Wystąpił błąd podczas zmiany hasła");
+    }
+  };
 
   const handleDeleteAccount = async () => {
     // Implementation for account deletion
@@ -176,14 +202,22 @@ export default function SettingsPage() {
                     <Input
                       id="currentPassword"
                       type="password"
-                      className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className={`bg-[#252422] border-[#403d39] text-[#fffcf2] ${passwordError ? "border-red-500" : ""}`}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newPassword" className="text-[#fffcf2]">
                       Nowe hasło
                     </Label>
-                    <Input id="newPassword" type="password" className="bg-[#252422] border-[#403d39] text-[#fffcf2]" />
+                    <Input 
+                      id="newPassword" 
+                      type="password" 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className={`bg-[#252422] border-[#403d39] text-[#fffcf2] ${passwordError ? "border-red-500" : ""}`} 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword" className="text-[#fffcf2]">
@@ -192,10 +226,18 @@ export default function SettingsPage() {
                     <Input
                       id="confirmPassword"
                       type="password"
-                      className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={`bg-[#252422] border-[#403d39] text-[#fffcf2] ${passwordError ? "border-red-500" : ""}`}
                     />
                   </div>
-                  <Button className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">Aktualizuj hasło</Button>
+                  {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
+                  <Button 
+                    onClick={handlePasswordChange}
+                    className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+                  >
+                    Aktualizuj hasło
+                  </Button>
                 </div>
               </div>
 
