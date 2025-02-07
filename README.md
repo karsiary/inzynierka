@@ -26,9 +26,7 @@ cp .env.example .env
 
 4. Zainicjalizuj bazę danych:
 ```bash
-npx prisma db pull # zaczytanie istniejącego schematu bazy danych
-npx prisma generate # wygenerowanie klienta Prisma
-npx prisma db push # zastosowanie schematu do bazy danych
+npx prisma migrate dev
 ```
 
 5. Uruchom aplikację w trybie deweloperskim:
@@ -50,10 +48,7 @@ npm run build
 npm start
 ```
 
-- Uruchomienie lintera:
-```bash
-npm run lint
-```
+
 
 ## Technologie
 - Next.js 14
