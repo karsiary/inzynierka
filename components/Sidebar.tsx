@@ -65,7 +65,7 @@ export function Sidebar() {
           <span className="font-roboto">Ustawienia</span>
         </Link>
         <button
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => signOut({ callbackUrl: window.location.origin + "/" })}
           className="flex items-center gap-3 text-[#ccc5b9] px-4 py-2 rounded-lg hover:bg-[#403d39] w-full text-left"
         >
           <LogOut className="w-5 h-5" />
