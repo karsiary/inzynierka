@@ -93,8 +93,28 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    // Implementation for account deletion
-  }
+    if (!confirm("Czy na pewno chcesz usunąć swoje konto? Ta operacja jest nieodwracalna.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/delete-account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Błąd podczas usuwania konta:", data.error);
+        return;
+      }
+
+      signOut();
+    } catch (error) {
+      console.error("Błąd podczas usuwania konta:", error);
+    }
+  };
 
   const updateBlobPosition = (element) => {
     setBlobLeft(element.offsetLeft)
