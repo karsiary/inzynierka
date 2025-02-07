@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
-import { Bell, Palette, Lock, Shield, Volume2, Users2 } from "lucide-react"
+import { Users2, Lock } from "lucide-react"
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -60,7 +60,7 @@ export default function SettingsPage() {
                 transform: `translateX(${blobLeft}px)`,
               }}
             />
-            {["konto", "powiadomienia", "wygląd", "bezpieczeństwo"].map((tab) => (
+            {["konto", "bezpieczeństwo"].map((tab) => (
               <TabsTrigger
                 key={tab}
                 value={tab}
@@ -69,8 +69,6 @@ export default function SettingsPage() {
                 ref={(el) => (tabRefs.current[tab] = el)}
               >
                 {tab === "konto" && <Users2 className="w-4 h-4" />}
-                {tab === "powiadomienia" && <Bell className="w-4 h-4" />}
-                {tab === "wygląd" && <Palette className="w-4 h-4" />}
                 {tab === "bezpieczeństwo" && <Lock className="w-4 h-4" />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </TabsTrigger>
@@ -80,209 +78,48 @@ export default function SettingsPage() {
 
         <TabsContent value="konto" className="space-y-6">
           <Card className="bg-[#403d39] border-none p-6">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 flex items-center gap-2">
-                  <Users2 className="w-5 h-5" />
-                  Informacje o profilu
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-[#fffcf2]">
-                      Imię
-                    </Label>
-                    <Input
-                      id="firstName"
-                      className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
-                      placeholder="Twoje imię"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-[#fffcf2]">
-                      Nazwisko
-                    </Label>
-                    <Input
-                      id="lastName"
-                      className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
-                      placeholder="Twoje nazwisko"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-[#fffcf2]">
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
-                      placeholder="twoj@email.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role" className="text-[#fffcf2]">
-                      Domyślna rola
-                    </Label>
-                    <Select>
-                      <SelectTrigger className="bg-[#252422] border-[#403d39] text-[#fffcf2]">
-                        <SelectValue placeholder="Wybierz domyślną rolę" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#252422] border-[#403d39]">
-                        <SelectItem value="producer" className="text-[#fffcf2]">
-                          Producent
-                        </SelectItem>
-                        <SelectItem value="engineer" className="text-[#fffcf2]">
-                          Inżynier dźwięku
-                        </SelectItem>
-                        <SelectItem value="artist" className="text-[#fffcf2]">
-                          Artysta
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div>
+              <h3 className="text-lg font-semibold text-[#fffcf2] mb-6 flex items-center gap-2">
+                <Users2 className="w-5 h-5" />
+                Informacje o profilu
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="text-[#fffcf2]">
+                    Imię
+                  </Label>
+                  <Input
+                    id="firstName"
+                    className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
+                    placeholder="Twoje imię"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="text-[#fffcf2]">
+                    Nazwisko
+                  </Label>
+                  <Input
+                    id="lastName"
+                    className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
+                    placeholder="Twoje nazwisko"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-[#fffcf2]">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
+                    placeholder="twoj@email.com"
+                  />
                 </div>
               </div>
-
-              <Separator className="bg-[#252422]" />
-
-              <div>
-                <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 flex items-center gap-2">
-                  {/* Globe icon and regional preferences removed */}
-                </h3>
-                {/* Regional preferences section removed */}
-              </div>
-
-              <Separator className="bg-[#252422]" />
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="powiadomienia" className="space-y-6">
-          <Card className="bg-[#403d39] border-none p-6">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 flex items-center gap-2">
-                  <Bell className="w-5 h-5" />
-                  Powiadomienia projektowe
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-[#fffcf2]">Nowe komentarze</Label>
-                      <p className="text-sm text-[#ccc5b9]">Powiadomienia o nowych komentarzach w projektach</p>
-                    </div>
-                    <Switch />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-[#fffcf2]">Terminy</Label>
-                      <p className="text-sm text-[#ccc5b9]">Przypomnienia o zbliżających się terminach</p>
-                    </div>
-                    <Switch />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-[#fffcf2]">Aktualizacje statusu</Label>
-                      <p className="text-sm text-[#ccc5b9]">Powiadomienia o zmianach statusu projektów</p>
-                    </div>
-                    <Switch />
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="bg-[#252422]" />
-
-              <div>
-                <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 flex items-center gap-2">
-                  <Volume2 className="w-5 h-5" />
-                  Dźwięki
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-[#fffcf2]">Dźwięki powiadomień</Label>
-                      <p className="text-sm text-[#ccc5b9]">Odtwarzaj dźwięki dla nowych powiadomień</p>
-                    </div>
-                    <Switch />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="wygląd" className="space-y-6">
-          <Card className="bg-[#403d39] border-none p-6">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 flex items-center gap-2">
-                  <Palette className="w-5 h-5" />
-                  Personalizacja
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="theme" className="text-[#fffcf2]">
-                        Motyw
-                      </Label>
-                      <Select>
-                        <SelectTrigger className="bg-[#252422] border-[#403d39] text-[#fffcf2]">
-                          <SelectValue placeholder="Wybierz motyw" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#252422] border-[#403d39]">
-                          <SelectItem value="dark" className="text-[#fffcf2]">
-                            Ciemny
-                          </SelectItem>
-                          <SelectItem value="light" className="text-[#fffcf2]">
-                            Jasny
-                          </SelectItem>
-                          <SelectItem value="system" className="text-[#fffcf2]">
-                            Systemowy
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="density" className="text-[#fffcf2]">
-                        Gęstość interfejsu
-                      </Label>
-                      <Select>
-                        <SelectTrigger className="bg-[#252422] border-[#403d39] text-[#fffcf2]">
-                          <SelectValue placeholder="Wybierz gęstość" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#252422] border-[#403d39]">
-                          <SelectItem value="compact" className="text-[#fffcf2]">
-                            Kompaktowa
-                          </SelectItem>
-                          <SelectItem value="comfortable" className="text-[#fffcf2]">
-                            Komfortowa
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="bg-[#252422]" />
-
-              <div>
-                <h3 className="text-lg font-semibold text-[#fffcf2] mb-4">Dostępność</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-[#fffcf2]">Zwiększony kontrast</Label>
-                      <p className="text-sm text-[#ccc5b9]">Popraw widoczność elementów interfejsu</p>
-                    </div>
-                    <Switch />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-[#fffcf2]">Zredukowane animacje</Label>
-                      <p className="text-sm text-[#ccc5b9]">Ogranicz animacje interfejsu</p>
-                    </div>
-                    <Switch />
-                  </div>
-                </div>
+              <div className="flex justify-end mt-6">
+                <Button className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
+                  Zapisz zmiany
+                </Button>
               </div>
             </div>
           </Card>
@@ -324,31 +161,6 @@ export default function SettingsPage() {
                     />
                   </div>
                   <Button className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">Aktualizuj hasło</Button>
-                </div>
-              </div>
-
-              <Separator className="bg-[#252422]" />
-
-              <div>
-                <h3 className="text-lg font-semibold text-[#fffcf2] mb-4 flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  Bezpieczeństwo
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-[#fffcf2]">Weryfikacja dwuetapowa</Label>
-                      <p className="text-sm text-[#ccc5b9]">Dodatkowa warstwa zabezpieczeń dla Twojego konta</p>
-                    </div>
-                    <Switch />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-[#fffcf2]">Powiadomienia o logowaniu</Label>
-                      <p className="text-sm text-[#ccc5b9]">Otrzymuj powiadomienia o nowych logowaniach</p>
-                    </div>
-                    <Switch />
-                  </div>
                 </div>
               </div>
 
