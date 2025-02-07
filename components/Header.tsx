@@ -1,5 +1,6 @@
 import { NotificationsPopover } from "@/components/NotificationsPopover"
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   title: string
@@ -8,10 +9,20 @@ interface HeaderProps {
 
 export function Header({ title, description }: HeaderProps) {
   const { data: session } = useSession();
+  const router = useRouter();
   
   const userInitials = session?.user?.name 
     ? session.user.name.split(" ").map((word) => word[0]).join("")
     : "?";
+
+  const handleSignIn = async () => {
+    await signIn("credentials", {
+      redirect: false,
+      email: "", // Replace with actual email
+      password: "", // Replace with actual password
+    });
+    router.refresh();
+  };
 
   return (
     <div className="flex justify-between items-center mb-8">

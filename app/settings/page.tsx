@@ -14,15 +14,53 @@ import { Separator } from "@/components/ui/separator"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { Users2, Lock } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [user, setUser] = useState<any>(null)
   const [blobLeft, setBlobLeft] = useState(0)
   const [blobWidth, setBlobWidth] = useState(0)
   const [blobHeight, setBlobHeight] = useState(0)
   const tabRefs = useRef({})
+
+  useEffect(() => {
+    if (session?.user?.name) {
+      const names = session.user.name.split(" ")
+      setFirstName(names[0] || "")
+      setLastName(names.slice(1).join(" ") || "")
+    }
+  }, [session])
+
+  const handleSaveChanges = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          firstName, 
+          lastName,
+          email: session?.user?.email
+        })
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Błąd aktualizacji danych")
+      }
+      
+      router.refresh()
+    } catch (error) {
+      console.error("Błąd podczas aktualizacji danych:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handlePasswordChange = async () => {
     // Implementation for password change
@@ -90,6 +128,8 @@ export default function SettingsPage() {
                   </Label>
                   <Input
                     id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                     className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
                     placeholder="Twoje imię"
                   />
@@ -100,25 +140,20 @@ export default function SettingsPage() {
                   </Label>
                   <Input
                     id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
                     className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
                     placeholder="Twoje nazwisko"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-[#fffcf2]">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    className="bg-[#252422] border-[#403d39] text-[#fffcf2]"
-                    placeholder="twoj@email.com"
-                  />
-                </div>
               </div>
               <div className="flex justify-end mt-6">
-                <Button className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90">
-                  Zapisz zmiany
+                <Button 
+                  onClick={handleSaveChanges}
+                  disabled={loading}
+                  className="bg-[#eb5e28] text-white hover:bg-[#eb5e28]/90"
+                >
+                  {loading ? "Zapisywanie..." : "Zapisz zmiany"}
                 </Button>
               </div>
             </div>
