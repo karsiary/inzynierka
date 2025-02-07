@@ -113,15 +113,15 @@ export default function ProjectSettingsPage() {
       // Przygotowanie listy członków z rolami
       const projectMembers = data.members?.map(member => ({
         ...member.user,
-        projectRole: member.user.id === data.userId ? "admin" : "user",
+        projectRole: member.role === "admin" ? "admin" : "user",
         userRoles: member.userRoles || []
       })) || []
       
       const teamMembers = data.teams?.flatMap(projectTeam => 
         projectTeam.team.members?.map(member => ({
           ...member.user,
-          projectRole: member.user.id === data.userId ? "admin" : "user",
-          userRoles: member.userRoles || []
+          projectRole: "user",
+          userRoles: []
         })) || []
       ) || []
 
@@ -193,6 +193,29 @@ export default function ProjectSettingsPage() {
         ? currentRoles.filter(role => role !== newRole)
         : [...currentRoles, newRole]
 
+      // Sprawdź, czy użytkownik jest już członkiem projektu
+      const isDirectMember = project?.members?.some(m => m.user.id === userId)
+
+      if (!isDirectMember) {
+        // Jeśli użytkownik nie jest bezpośrednim członkiem, dodaj go najpierw do projektu
+        const addMemberResponse = await fetch(`/api/projects/${projectId}/members`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: userId,
+            projectRole: 'user',
+            userRoles: updatedRoles
+          })
+        })
+
+        if (!addMemberResponse.ok) {
+          throw new Error('Błąd podczas dodawania użytkownika do projektu')
+        }
+      }
+
+      // Aktualizuj role użytkownika
       const response = await fetch(`/api/projects/${projectId}/members/${userId}/roles`, {
         method: 'PUT',
         headers: {
