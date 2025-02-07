@@ -33,7 +33,7 @@ export async function GET(req: Request) {
       ...(statusFilter === "completed" ? { progress: 100 } : {})
     } : {}
 
-    const [myProjects, teamProjects, memberProjects] = await Promise.all([
+    const [myProjects, teamProjects, memberProjects, taskBudgets] = await Promise.all([
       // Projekty, których jestem właścicielem
       prisma.project.findMany({
         where: {
@@ -194,11 +194,31 @@ export async function GET(req: Request) {
           }
         },
         orderBy: { created_at: 'desc' }
+      }),
+
+      // Agregacja budżetu wykorzystanego dla wszystkich projektów
+      prisma.task.groupBy({
+        by: ['project_id'],
+        _sum: {
+          actual_budget: true
+        }
       })
     ])
 
-    // Łączymy wszystkie projekty
-    const allProjects = [...myProjects, ...teamProjects, ...memberProjects]
+    // Tworzenie mapy budżetów
+    const budgetMap = taskBudgets.reduce((map, item) => {
+      map[item.project_id] = item._sum.actual_budget || 0;
+      return map;
+    }, {} as Record<number, number>);
+
+    // Łączymy wszystkie projekty i dodajemy informacje o budżecie
+    const allProjects = [...myProjects, ...teamProjects, ...memberProjects].map(project => ({
+      ...project,
+      budget_actual: budgetMap[project.id] || 0,
+      budget_planned: project.budgetType === 'global' 
+        ? project.budgetGlobal || 0 
+        : (project.budgetPhase1 || 0) + (project.budgetPhase2 || 0) + (project.budgetPhase3 || 0) + (project.budgetPhase4 || 0)
+    }))
 
     return NextResponse.json(allProjects)
   } catch (error) {

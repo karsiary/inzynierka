@@ -209,7 +209,7 @@ export default function ProjectsPage() {
                     <div className="text-right">
                       <p className="text-sm text-[#ccc5b9]">Budżet</p>
                       <p className="text-[#fffcf2] font-semibold">
-                        {project.budget_actual} / {project.budget_planned} PLN
+                        {new Intl.NumberFormat('pl-PL').format(project.budget_actual)} / {new Intl.NumberFormat('pl-PL').format(project.budget_planned)} PLN
                       </p>
                     </div>
                   </div>
