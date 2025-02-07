@@ -64,8 +64,8 @@ credentials.json
 .cursorrules
 
 # database
-.db
-dev.db
+*.db
+
 
 
 
