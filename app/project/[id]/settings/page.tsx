@@ -117,8 +117,8 @@ export default function ProjectSettingsPage() {
         userRoles: member.userRoles || []
       })) || []
       
-      const teamMembers = data.teams?.flatMap(team => 
-        team.members?.map(member => ({
+      const teamMembers = data.teams?.flatMap(projectTeam => 
+        projectTeam.team.members?.map(member => ({
           ...member.user,
           projectRole: member.user.id === data.userId ? "admin" : "user",
           userRoles: member.userRoles || []
