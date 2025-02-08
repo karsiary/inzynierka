@@ -17,7 +17,6 @@ npm install
 ```bash
 cp .env.example .env
 ```
-- Zmodyfikuj wartości w pliku `.env` według potrzeb
 
 3. Zainicjalizuj bazę danych:
 ```bash
