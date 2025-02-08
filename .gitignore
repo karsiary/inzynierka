@@ -36,8 +36,7 @@ yarn-error.log*
 .env
 #.env.example
 
-# vercel
-.vercel
+
 
 # typescript
 *.tsbuildinfo
@@ -59,9 +58,6 @@ credentials.json
 
 # vscode
 .vscode/
-   
-# cursor rules
-.cursorrules
 
 # database
 *.db
