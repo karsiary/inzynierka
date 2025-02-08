@@ -32,7 +32,7 @@ export function RegisterForm() {
         throw new Error("Hasło musi mieć co najmniej 6 znaków")
       }
 
-      console.log("Próba utworzenia użytkownika...")
+      
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -51,15 +51,14 @@ export function RegisterForm() {
         throw new Error(data.error || "Wystąpił błąd podczas rejestracji")
       }
 
-      console.log("Użytkownik utworzony:", data)
-
-      console.log("Próba logowania...")
+      
+      
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       })
-      console.log("Wynik logowania:", result)
+      
 
       if (result?.error) {
         throw new Error(result.error)
